@@ -11,13 +11,15 @@ const router = Router()
 
 const isProduction = process.env.NODE_ENV === 'production'
 
-// httpOnly so frontend JS can never read the token; secure+sameSite=none
-// only in production (real HTTPS, cross-origin frontend/backend) — locally
-// everything is plain http on the same machine, where 'lax' is correct.
+// httpOnly so frontend JS can never read the token. sameSite: 'lax' is
+// correct everywhere now — the frontend is served by this same Express app
+// in production (genuinely same-origin, not just same-site) and by the
+// local Vite dev server + this API locally (same site, different port).
+// secure requires real HTTPS, which only production has.
 const cookieOptions = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? 'none' : 'lax',
+  sameSite: 'lax',
   maxAge: 30 * 24 * 60 * 60 * 1000,
 }
 

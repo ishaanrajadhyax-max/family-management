@@ -1,9 +1,19 @@
-# Render Blueprint for the family-manager backend.
+# Render Blueprint for family-manager — one service serving both the API
+# and the built frontend from the same origin.
+#
+# Why one service: this used to be two separate Render services (an API
+# web service + a frontend static site) on different onrender.com
+# subdomains. onrender.com is on the public suffix list, so those counted
+# as different "sites" to a browser, making the session cookie a genuine
+# third-party cookie — Safari blocks those by default, so every iPhone
+# user could log in but the cookie never stuck ("Not authenticated" on the
+# very next request). Serving the frontend from this same Express app
+# makes it truly same-origin, which fixes that for every browser.
 #
 # This declares the service configuration only — no secrets live here.
-# DATABASE_URL, CORS_ORIGIN, and JWT_SECRET all use `sync: false`, meaning
-# Render prompts for their actual values in the dashboard; they are never
-# stored in this file or in git.
+# DATABASE_URL and JWT_SECRET use `sync: false`, meaning Render prompts
+# for their actual values in the dashboard; they are never stored in this
+# file or in git.
 #
 # Live: this service is deployed and auto-deploys from GitHub main.
 
@@ -13,7 +23,10 @@ services:
     runtime: node
     plan: free
     rootDir: server
-    buildCommand: npm install
+    # Builds the frontend first (from the repo root, one level up) so its
+    # output lands in ../dist, which server.js serves as static files —
+    # then installs the backend's own dependencies.
+    buildCommand: cd .. && npm install && npm run build && cd server && npm install
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -21,15 +34,16 @@ services:
       # Set manually in the Render dashboard — never committed.
       - key: DATABASE_URL
         sync: false
-      # The deployed frontend's URL, so CORS allows real browser requests.
-      # Unknown until Milestone 4 (frontend deploy) — set once that exists.
+      # Optional now that the frontend is same-origin (served by this same
+      # service) — only needed if some other, genuinely separate origin
+      # ever needs to call this API directly.
       - key: CORS_ORIGIN
         sync: false
       # Signs session cookies (added in the auth milestone). Generate a
       # fresh random value for production — do not reuse the local one.
       - key: JWT_SECRET
         sync: false
-      # Cookie security depends on this — enables secure+sameSite=none,
-      # required for a real HTTPS cross-origin cookie in production.
+      # Cookie security depends on this — enables `secure`, required for a
+      # real HTTPS cookie in production.
       - key: NODE_ENV
         value: production
