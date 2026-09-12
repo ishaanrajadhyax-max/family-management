@@ -36,6 +36,9 @@ export default function DadSidebar({
   viewingId,
   onChangeViewing,
 }: DadSidebarProps) {
+  const isAdmin = currentUser.role === 'admin'
+  const navItems = isAdmin ? [...NAV_ITEMS, { page: 'user-management' as const, label: 'User Management' }] : NAV_ITEMS
+
   return (
     <nav className="dad-sidebar" aria-label="Family Management navigation">
       <div className="dad-sidebar-header">
@@ -61,7 +64,7 @@ export default function DadSidebar({
       )}
 
       <ul className="dad-sidebar-nav">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <li key={item.page}>
             <button
               type="button"

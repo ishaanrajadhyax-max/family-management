@@ -39,7 +39,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     }
 
     const result = await pool.query(
-      'SELECT id, name, role, password_hash FROM family_members WHERE username = $1',
+      'SELECT id, name, role, password_hash, is_active FROM family_members WHERE username = $1',
       [String(username).trim().toLowerCase()],
     )
     const member = result.rows[0]
@@ -52,6 +52,13 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     const passwordMatches = await verifyPassword(password, member.password_hash)
     if (!passwordMatches) {
       return res.status(401).json({ error: 'Invalid username or password' })
+    }
+    // Checked after the password, not before: a disabled account with a
+    // correct password should say "disabled" (actionable), but we still
+    // don't want a wrong password on a disabled account leaking that the
+    // account exists and is disabled.
+    if (!member.is_active) {
+      return res.status(403).json({ error: 'This account has been disabled. Contact an admin.' })
     }
 
     const token = signToken(member)

@@ -9,10 +9,18 @@ import ActivityPage from './pages/ActivityPage'
 import HistoryPage from './pages/HistoryPage'
 import InsightsPage from './pages/InsightsPage'
 import ProfilePage from './pages/ProfilePage'
+import UserManagementPage from '../admin/UserManagementPage'
 import * as api from './api'
 import type { ApiFamilyMember } from './api'
 
-export type DadPage = 'dashboard' | 'health-readings' | 'activity' | 'history' | 'insights' | 'profile'
+export type DadPage =
+  | 'dashboard'
+  | 'health-readings'
+  | 'activity'
+  | 'history'
+  | 'insights'
+  | 'profile'
+  | 'user-management'
 
 // Top-level shell — the name is historical (this started as Dad-only). The
 // same pages/components now serve whoever is logged in: Dad and Mom always
@@ -55,6 +63,7 @@ export default function DadApp() {
           {activePage === 'history' && <HistoryPage />}
           {activePage === 'insights' && <InsightsPage />}
           {activePage === 'profile' && <ProfilePage member={viewingMember} />}
+          {activePage === 'user-management' && isAdmin && <UserManagementPage />}
         </main>
       </div>
     </DadDataProvider>

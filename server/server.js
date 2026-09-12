@@ -14,6 +14,7 @@ import cookieParser from 'cookie-parser'
 import { pool } from './db.js'
 import authRouter from './routes/auth.js'
 import familyMembersRouter from './routes/familyMembers.js'
+import adminUsersRouter from './routes/adminUsers.js'
 import bloodSugarRouter from './routes/bloodSugar.js'
 import bloodPressureRouter from './routes/bloodPressure.js'
 import heartRateRouter from './routes/heartRate.js'
@@ -53,6 +54,7 @@ app.use('/api/auth', authRouter)
 app.use(requireAuth)
 
 app.use('/api/family-members', requireAdmin, familyMembersRouter)
+app.use('/api/admin/users', requireAdmin, adminUsersRouter)
 app.use('/api/blood-sugar-readings', bloodSugarRouter)
 app.use('/api/blood-pressure-readings', bloodPressureRouter)
 app.use('/api/heart-rate-readings', heartRateRouter)
