@@ -3,14 +3,14 @@
 // responsible for translating that into the UI-friendly shapes in types.ts
 // (e.g. recordedAt -> separate date/time strings).
 import type { GlucoseUnit, DistanceUnit, WorkoutFocus, ActivityType, ReadingContext } from './types'
-
-const API_BASE_URL = 'http://localhost:4000/api'
+import { API_BASE_URL } from '../../apiBase'
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // send/receive the httpOnly session cookie
       ...options,
     })
   } catch {

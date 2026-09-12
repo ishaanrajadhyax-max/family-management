@@ -1,11 +1,15 @@
-// Holds Dad's data, fetched from the backend API (server/), which reads
-// and writes the real family_manager PostgreSQL database. Every page and
-// form in the Dad section reads through this context, so a reading added
-// on one page immediately shows up on the Dashboard/History/Insights pages
-// too, and everyone sees the same 693 historical readings that were
-// imported earlier.
+// Holds one family member's data (whichever familyMemberId is passed in —
+// see DadApp.tsx for how that's chosen), fetched from the backend API
+// (server/), which reads and writes the real family_manager PostgreSQL
+// database. Every page and form reads through this context, so a reading
+// added on one page immediately shows up on the Dashboard/History/Insights
+// pages too. The name is historical (this started as Dad-only) — the same
+// components now serve whichever family member is being viewed.
 //
 // Data flow:  React (this file, via api.ts) -> server/ (Express) -> PostgreSQL
+// Server-side authorization (see server/auth/access.js) is what actually
+// decides whether a request for a given familyMemberId is allowed — this
+// file just asks; it doesn't enforce anything.
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import type {
@@ -40,8 +44,16 @@ interface DadDataContextValue {
 
 const DadDataContext = createContext<DadDataContextValue | null>(null)
 
-export function DadDataProvider({ children }: { children: ReactNode }) {
-  const [familyMemberId, setFamilyMemberId] = useState<string | null>(null)
+interface DadDataProviderProps {
+  // Whose data to load. This is the authenticated user's own id for Dad/Mom;
+  // for Ishaan (admin) it's whichever family member is currently selected
+  // to view/manage — the server enforces who's actually allowed to see it,
+  // this prop only decides what this provider *asks* for.
+  familyMemberId: string
+  children: ReactNode
+}
+
+export function DadDataProvider({ familyMemberId, children }: DadDataProviderProps) {
   const [bloodSugarReadings, setBloodSugarReadings] = useState<BloodSugarReading[]>([])
   const [bloodPressureReadings, setBloodPressureReadings] = useState<BloodPressureReading[]>([])
   const [heartRateReadings, setHeartRateReadings] = useState<HeartRateReading[]>([])
@@ -54,24 +66,18 @@ export function DadDataProvider({ children }: { children: ReactNode }) {
     let cancelled = false
 
     async function loadEverything() {
+      setStatus('loading')
       try {
-        const members = await api.getFamilyMembers()
-        const dad = members.find((m) => m.role === 'dad')
-        if (!dad) {
-          throw new Error("No family member with role 'dad' exists in the database yet.")
-        }
-
         const [sugar, pressure, heartRate, walkRun, gym] = await Promise.all([
-          api.listBloodSugarReadings(dad.id),
-          api.listBloodPressureReadings(dad.id),
-          api.listHeartRateReadings(dad.id),
-          api.listWalkRunActivities(dad.id),
-          api.listGymActivities(dad.id),
+          api.listBloodSugarReadings(familyMemberId),
+          api.listBloodPressureReadings(familyMemberId),
+          api.listHeartRateReadings(familyMemberId),
+          api.listWalkRunActivities(familyMemberId),
+          api.listGymActivities(familyMemberId),
         ])
 
         if (cancelled) return
 
-        setFamilyMemberId(dad.id)
         setBloodSugarReadings(sugar.map((r) => ({
           id: r.id,
           ...isoToIstDateTime(r.recordedAt),
@@ -128,16 +134,11 @@ export function DadDataProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [])
-
-  function requireFamilyMemberId(): string {
-    if (!familyMemberId) throw new Error('Family member not loaded yet.')
-    return familyMemberId
-  }
+  }, [familyMemberId])
 
   const addBloodSugarReading: DadDataContextValue['addBloodSugarReading'] = async (entry) => {
     const created = await api.createBloodSugarReading({
-      familyMemberId: requireFamilyMemberId(),
+      familyMemberId,
       recordedAt: istDateTimeToIso(entry.date, entry.time),
       readingContext: entry.readingContext,
       value: entry.value,
@@ -174,7 +175,7 @@ export function DadDataProvider({ children }: { children: ReactNode }) {
 
   const addBloodPressureReading: DadDataContextValue['addBloodPressureReading'] = async (entry) => {
     const created = await api.createBloodPressureReading({
-      familyMemberId: requireFamilyMemberId(),
+      familyMemberId,
       recordedAt: istDateTimeToIso(entry.date, entry.time),
       readingContext: entry.readingContext,
       systolic: entry.systolic,
@@ -215,7 +216,7 @@ export function DadDataProvider({ children }: { children: ReactNode }) {
 
   const addHeartRateReading: DadDataContextValue['addHeartRateReading'] = async (entry) => {
     const created = await api.createHeartRateReading({
-      familyMemberId: requireFamilyMemberId(),
+      familyMemberId,
       recordedAt: istDateTimeToIso(entry.date, entry.time),
       value: entry.value,
       comments: entry.comments,
@@ -244,7 +245,7 @@ export function DadDataProvider({ children }: { children: ReactNode }) {
 
   const addWalkRunActivity: DadDataContextValue['addWalkRunActivity'] = async (entry) => {
     const created = await api.createWalkRunActivity({
-      familyMemberId: requireFamilyMemberId(),
+      familyMemberId,
       activityType: entry.activityType,
       recordedAt: istDateTimeToIso(entry.date, entry.startTime),
       durationMinutes: entry.durationMinutes,
@@ -289,7 +290,7 @@ export function DadDataProvider({ children }: { children: ReactNode }) {
 
   const addGymActivity: DadDataContextValue['addGymActivity'] = async (entry) => {
     const created = await api.createGymActivity({
-      familyMemberId: requireFamilyMemberId(),
+      familyMemberId,
       recordedAt: istDateTimeToIso(entry.date, entry.time),
       focus: entry.focus,
       exercises: entry.exercises,
@@ -378,7 +379,7 @@ export function DadDataProvider({ children }: { children: ReactNode }) {
   }, [bloodSugarReadings, bloodPressureReadings, heartRateReadings, walkRunActivities, gymActivities])
 
   if (status === 'loading') {
-    return <div className="dad-app-status">Loading Dad's data…</div>
+    return <div className="dad-app-status">Loading…</div>
   }
 
   if (status === 'error') {

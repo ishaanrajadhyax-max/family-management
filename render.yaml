@@ -25,3 +25,11 @@ services:
       # Unknown until Milestone 4 (frontend deploy) — set once that exists.
       - key: CORS_ORIGIN
         sync: false
+      # Signs session cookies (added in the auth milestone). Generate a
+      # fresh random value for production — do not reuse the local one.
+      - key: JWT_SECRET
+        sync: false
+      # Cookie security depends on this — enables secure+sameSite=none,
+      # required for a real HTTPS cross-origin cookie in production.
+      - key: NODE_ENV
+        value: production

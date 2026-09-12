@@ -1,22 +1,34 @@
 // Minimal API layer: React frontend -> this server -> PostgreSQL (family_manager).
-// No authentication/roles yet — every route just takes a familyMemberId,
-// matching the current single-user (Dad) scope of the frontend.
+//
+// Auth model: a signed, httpOnly cookie identifies the caller (id, name,
+// role) on every request via requireAuth. Every health-data route below
+// that point enforces access itself (see auth/access.js) — Dad and Mom can
+// only ever act on their own family_member_id, Ishaan (admin) can act on
+// any of them. Nothing here trusts a client-supplied identity without
+// checking it against the session.
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
+import cookieParser from 'cookie-parser'
 import { pool } from './db.js'
+import authRouter from './routes/auth.js'
 import familyMembersRouter from './routes/familyMembers.js'
 import bloodSugarRouter from './routes/bloodSugar.js'
 import bloodPressureRouter from './routes/bloodPressure.js'
 import heartRateRouter from './routes/heartRate.js'
 import walkRunRouter from './routes/walkRun.js'
 import gymRouter from './routes/gym.js'
+import { requireAuth, requireAdmin } from './middleware/requireAuth.js'
 
 const app = express()
 
-app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }))
+app.use(helmet())
+app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true }))
 app.use(express.json())
+app.use(cookieParser())
 
+// Public — no session required.
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1')
@@ -25,8 +37,12 @@ app.get('/api/health', async (_req, res) => {
     res.status(503).json({ status: 'error', database: 'unreachable' })
   }
 })
+app.use('/api/auth', authRouter)
 
-app.use('/api/family-members', familyMembersRouter)
+// Everything below this line requires a valid session.
+app.use(requireAuth)
+
+app.use('/api/family-members', requireAdmin, familyMembersRouter)
 app.use('/api/blood-sugar-readings', bloodSugarRouter)
 app.use('/api/blood-pressure-readings', bloodPressureRouter)
 app.use('/api/heart-rate-readings', heartRateRouter)
