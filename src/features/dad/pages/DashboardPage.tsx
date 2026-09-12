@@ -1,15 +1,24 @@
 import { useMemo, useState } from 'react'
 import { useDadData } from '../DadDataContext'
 import type { Period } from '../types'
+import { CHART_INTERVAL_LABELS } from '../types'
 import PeriodSelector from '../components/PeriodSelector'
 import StatCard from '../components/StatCard'
 import SectionCard from '../components/SectionCard'
 import TrendChart from '../components/TrendChart'
+import HealthChartToolbar from '../components/HealthChartToolbar'
 import EmptyState from '../components/EmptyState'
 import { BLOOD_SUGAR_Y_DOMAIN, SYSTOLIC_Y_DOMAIN } from '../chartConstants'
+import type { HealthFilterState } from '../healthFilters'
+import {
+  DEFAULT_HEALTH_FILTERS,
+  filterBloodSugarReadings,
+  filterBloodPressureReadings,
+  aggregateReadings,
+  collectDistinctComments,
+} from '../healthFilters'
 import {
   byMostRecent,
-  buildDailyAveragePoints,
   formatDateDisplay,
   formatTimeDisplay,
   isWithinPeriod,
@@ -18,7 +27,11 @@ import {
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-export default function DashboardPage() {
+interface DashboardPageProps {
+  onDrilldown: (metric: 'bloodSugar' | 'bloodPressure', startDate: string, endDate: string) => void
+}
+
+export default function DashboardPage({ onDrilldown }: DashboardPageProps) {
   const {
     bloodSugarReadings,
     bloodPressureReadings,
@@ -77,8 +90,44 @@ export default function DashboardPage() {
   }, [walkRunActivities, gymActivities])
 
   // --- Health Trends -----------------------------------------------------
-  const bloodSugarTrend = buildDailyAveragePoints(bloodSugarReadings, period, (r) => r.value)
-  const systolicTrend = buildDailyAveragePoints(bloodPressureReadings, period, (r) => r.systolic)
+  const [healthFilters, setHealthFilters] = useState<HealthFilterState>(DEFAULT_HEALTH_FILTERS)
+
+  const filteredBloodSugar = useMemo(
+    () => filterBloodSugarReadings(bloodSugarReadings, healthFilters),
+    [bloodSugarReadings, healthFilters],
+  )
+  const filteredBloodPressure = useMemo(
+    () => filterBloodPressureReadings(bloodPressureReadings, healthFilters),
+    [bloodPressureReadings, healthFilters],
+  )
+  const bloodSugarPoints = useMemo(
+    () => aggregateReadings(filteredBloodSugar, healthFilters.groupBy, (r) => r.value),
+    [filteredBloodSugar, healthFilters.groupBy],
+  )
+  const systolicPoints = useMemo(
+    () => aggregateReadings(filteredBloodPressure, healthFilters.groupBy, (r) => r.systolic),
+    [filteredBloodPressure, healthFilters.groupBy],
+  )
+  const bloodSugarDetailById = useMemo(
+    () => new Map(filteredBloodSugar.map((r) => [r.id, { time: r.time, readingContext: r.readingContext, comments: r.comments }])),
+    [filteredBloodSugar],
+  )
+  const bloodPressureDetailById = useMemo(
+    () =>
+      new Map(
+        filteredBloodPressure.map((r) => [
+          r.id,
+          { time: r.time, readingContext: r.readingContext, comments: r.comments },
+        ]),
+      ),
+    [filteredBloodPressure],
+  )
+  const commentOptions = useMemo(
+    () => collectDistinctComments(bloodSugarReadings, bloodPressureReadings),
+    [bloodSugarReadings, bloodPressureReadings],
+  )
+  const groupLabel =
+    healthFilters.groupBy === 'daily' ? undefined : `${CHART_INTERVAL_LABELS[healthFilters.groupBy]}`
 
   // --- Recent entries ------------------------------------------------
   const recentEntries = historyEntries.slice(0, 6)
@@ -134,25 +183,36 @@ export default function DashboardPage() {
       </SectionCard>
 
       <SectionCard title="Health Trends">
+        <HealthChartToolbar filters={healthFilters} onChange={setHealthFilters} commentOptions={commentOptions} />
         <div className="dad-trend-grid">
-          <div>
-            <h3 className="dad-subheading">Blood Sugar</h3>
-            <TrendChart
-              points={bloodSugarTrend}
-              unit="mg/dL"
-              emptyMessage="No blood sugar readings in this period."
-              yDomain={BLOOD_SUGAR_Y_DOMAIN}
-            />
-          </div>
-          <div>
-            <h3 className="dad-subheading">Blood Pressure (systolic)</h3>
-            <TrendChart
-              points={systolicTrend}
-              unit="mmHg"
-              emptyMessage="No blood pressure readings in this period."
-              yDomain={SYSTOLIC_Y_DOMAIN}
-            />
-          </div>
+          {healthFilters.metric !== 'bloodPressure' && (
+            <div>
+              <h3 className="dad-subheading">Blood Sugar</h3>
+              <TrendChart
+                points={bloodSugarPoints}
+                unit="mg/dL"
+                emptyMessage="No blood sugar readings match these filters."
+                yDomain={BLOOD_SUGAR_Y_DOMAIN}
+                groupLabel={groupLabel}
+                detailLookup={(id) => bloodSugarDetailById.get(id)}
+                onPointClick={(point) => onDrilldown('bloodSugar', point.startDate, point.endDate)}
+              />
+            </div>
+          )}
+          {healthFilters.metric !== 'bloodSugar' && (
+            <div>
+              <h3 className="dad-subheading">Blood Pressure (systolic)</h3>
+              <TrendChart
+                points={systolicPoints}
+                unit="mmHg"
+                emptyMessage="No blood pressure readings match these filters."
+                yDomain={SYSTOLIC_Y_DOMAIN}
+                groupLabel={groupLabel}
+                detailLookup={(id) => bloodPressureDetailById.get(id)}
+                onPointClick={(point) => onDrilldown('bloodPressure', point.startDate, point.endDate)}
+              />
+            </div>
+          )}
         </div>
       </SectionCard>
 

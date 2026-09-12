@@ -416,17 +416,135 @@
 
 .dad-trend-dot {
   position: absolute;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  margin-left: -10px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.dad-trend-dot::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
   width: 8px;
   height: 8px;
-  margin-top: -4px;
-  margin-left: -4px;
+  margin: -4px 0 0 -4px;
   border-radius: 50%;
   background: var(--accent);
   border: 2px solid var(--bg);
 }
 
-.dad-trend-dot-out {
+.dad-trend-dot-out::after {
   background: #ef4444;
+}
+
+.dad-trend-dot:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Chart tooltip (hover on desktop, tap-to-pin on touch) ------------------ */
+
+.dad-trend-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  min-width: 140px;
+  max-width: 220px;
+  background: var(--text-h);
+  color: var(--bg);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  box-shadow: var(--shadow);
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.dad-trend-tooltip-title {
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.dad-trend-tooltip-comment {
+  font-style: italic;
+  opacity: 0.9;
+}
+
+.dad-trend-tooltip-link {
+  display: block;
+  margin-top: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Compact chart toolbar: [ All v ] [ Group by: Daily v ] [ Filter ] ------ */
+
+.dad-chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.dad-compact-select {
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-family: inherit;
+  max-width: 100%;
+}
+
+.dad-filter-button {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.dad-filter-button button {
+  font-family: inherit;
+  font-size: 14px;
+  border: none;
+  background: var(--bg);
+  color: var(--text-h);
+  padding: 8px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dad-filter-button button:first-child:hover {
+  background: var(--accent-bg);
+}
+
+.dad-filter-button-clear {
+  border-left: 1px solid var(--border) !important;
+  color: var(--text) !important;
+  font-size: 16px !important;
+  padding: 8px 10px !important;
+}
+
+.dad-filter-button-clear:hover {
+  color: #ef4444 !important;
 }
 
 .dad-trend-x-axis {
@@ -953,5 +1071,193 @@
 
   .dad-modal {
     padding: 18px;
+  }
+}
+
+/* Filter drawer — slides in from the right on desktop, becomes a
+   near-full-height bottom sheet on mobile (see the media query below). --- */
+
+.dad-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 100;
+}
+
+.dad-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dad-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  z-index: 101;
+  box-sizing: border-box;
+}
+
+.dad-drawer.open {
+  transform: translateX(0);
+}
+
+.dad-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dad-drawer-header h2 {
+  margin: 0;
+  font-size: 19px;
+  text-align: left;
+}
+
+.dad-drawer-count {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dad-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dad-filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dad-filter-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.dad-filter-section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dad-filter-radio-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dad-filter-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.dad-filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.dad-filter-date-range {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.dad-filter-date-range .dad-form-row {
+  flex: 1;
+  min-width: 140px;
+}
+
+.dad-filter-min-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.dad-filter-min-row .dad-form-row {
+  flex: 1;
+}
+
+.dad-block-toggle {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.dad-block-toggle.active {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.dad-drawer-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.dad-drawer-actions button {
+  flex: 1;
+  margin-top: 0;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .dad-drawer {
+    max-width: 100%;
+    top: auto;
+    height: 92svh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+  }
+
+  .dad-drawer.open {
+    transform: translateY(0);
+  }
+
+  .dad-trend-tooltip {
+    max-width: 200px;
   }
 }

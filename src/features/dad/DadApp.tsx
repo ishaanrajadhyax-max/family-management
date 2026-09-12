@@ -22,6 +22,17 @@ export type DadPage =
   | 'profile'
   | 'user-management'
 
+// A request to open Health Readings pre-filtered to exactly the underlying
+// records behind a clicked graph point — its nominal date range, never its
+// average. `token` changes on every click (even to the same range) so the
+// page's effect re-applies it each time, not just the first.
+export interface ReadingsDrilldownRequest {
+  metric: 'bloodSugar' | 'bloodPressure'
+  startDate: string
+  endDate: string
+  token: number
+}
+
 // Top-level shell — the name is historical (this started as Dad-only). The
 // same pages/components now serve whoever is logged in: Dad and Mom always
 // view their own data; Ishaan (admin) can switch which family member he's
@@ -33,6 +44,7 @@ export default function DadApp() {
   const [activePage, setActivePage] = useState<DadPage>('dashboard')
   const [familyMembers, setFamilyMembers] = useState<ApiFamilyMember[]>([])
   const [viewingId, setViewingId] = useState(user!.id)
+  const [drilldownRequest, setDrilldownRequest] = useState<ReadingsDrilldownRequest | null>(null)
 
   const isAdmin = user!.role === 'admin'
 
@@ -43,6 +55,11 @@ export default function DadApp() {
   }, [isAdmin])
 
   const viewingMember = familyMembers.find((m) => m.id === viewingId) ?? user!
+
+  function handleDrilldown(metric: 'bloodSugar' | 'bloodPressure', startDate: string, endDate: string) {
+    setDrilldownRequest({ metric, startDate, endDate, token: Date.now() })
+    setActivePage('health-readings')
+  }
 
   return (
     <DadDataProvider familyMemberId={viewingId}>
@@ -57,11 +74,16 @@ export default function DadApp() {
           onChangeViewing={setViewingId}
         />
         <main className="dad-main">
-          {activePage === 'dashboard' && <DashboardPage />}
-          {activePage === 'health-readings' && <HealthReadingsPage />}
+          {activePage === 'dashboard' && <DashboardPage onDrilldown={handleDrilldown} />}
+          {activePage === 'health-readings' && (
+            <HealthReadingsPage
+              drilldownRequest={drilldownRequest}
+              onDrilldownConsumed={() => setDrilldownRequest(null)}
+            />
+          )}
           {activePage === 'activity' && <ActivityPage />}
           {activePage === 'history' && <HistoryPage />}
-          {activePage === 'insights' && <InsightsPage />}
+          {activePage === 'insights' && <InsightsPage onDrilldown={handleDrilldown} />}
           {activePage === 'profile' && <ProfilePage member={viewingMember} />}
           {activePage === 'user-management' && isAdmin && <UserManagementPage />}
         </main>
