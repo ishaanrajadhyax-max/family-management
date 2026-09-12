@@ -26,7 +26,22 @@ services:
     # Builds the frontend first (from the repo root, one level up) so its
     # output lands in ../dist, which server.js serves as static files —
     # then installs the backend's own dependencies.
-    buildCommand: cd .. && npm install && npm run build && cd server && npm install
+    #
+    # --include=dev on the root install is required, not optional: this
+    # service's own NODE_ENV=production (below) is visible to `npm install`
+    # during the build too, and npm's default behavior under
+    # NODE_ENV=production is to skip devDependencies entirely — which is
+    # exactly where vite, typescript, and @types/node live in the root
+    # package.json (`npm run build` runs `tsc -b && vite build`, so all
+    # three are needed at build time). Without the flag, `npm install`
+    # silently installs only react/react-dom and the build fails with
+    # "Cannot find type definition file for 'vite/client'" /  'node'.
+    # Confirmed by reproducing it in isolation: `NODE_ENV=production npm
+    # install` installs 3 packages; `NODE_ENV=production npm install
+    # --include=dev` installs all 166. The backend's own install (last
+    # step) doesn't need the flag — server/package.json has no
+    # devDependencies to begin with.
+    buildCommand: cd .. && npm install --include=dev && npm run build && cd server && npm install
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
