@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useDadData } from '../DadDataContext'
-import MilitaryTimeInput from '../components/MilitaryTimeInput'
+import TimeInput from '../components/TimeInput'
 import type { BloodPressureReading, ReadingContext } from '../types'
 import { READING_CONTEXTS } from '../types'
 import { toDateString, toTimeString } from '../utils'
@@ -63,8 +63,8 @@ export default function BloodPressureForm({ onSaved, existing }: BloodPressureFo
         <input id="bp-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
       </div>
       <div className="dad-form-row">
-        <label htmlFor="bp-time-hour">Time</label>
-        <MilitaryTimeInput idPrefix="bp-time" value={time} onChange={setTime} />
+        <label htmlFor="bp-time-digits">Time</label>
+        <TimeInput idPrefix="bp-time" value={time} onChange={setTime} />
       </div>
       <div className="dad-form-row">
         <label htmlFor="bp-context">When</label>

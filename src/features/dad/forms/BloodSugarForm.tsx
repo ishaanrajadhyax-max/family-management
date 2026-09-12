@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useDadData } from '../DadDataContext'
-import MilitaryTimeInput from '../components/MilitaryTimeInput'
+import TimeInput from '../components/TimeInput'
 import type { BloodSugarReading, GlucoseUnit, ReadingContext } from '../types'
 import { READING_CONTEXTS } from '../types'
 import { toDateString, toTimeString } from '../utils'
@@ -63,8 +63,8 @@ export default function BloodSugarForm({ onSaved, existing }: BloodSugarFormProp
         <input id="bs-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
       </div>
       <div className="dad-form-row">
-        <label htmlFor="bs-time-hour">Time</label>
-        <MilitaryTimeInput idPrefix="bs-time" value={time} onChange={setTime} />
+        <label htmlFor="bs-time-digits">Time</label>
+        <TimeInput idPrefix="bs-time" value={time} onChange={setTime} />
       </div>
       <div className="dad-form-row">
         <label htmlFor="bs-context">When</label>
