@@ -1,0 +1,658 @@
+/* Styles for the Dad section: sidebar layout, dashboard cards, forms,
+   and the "quick add" modal. Uses the color variables already defined in
+   src/index.css so it follows the existing light/dark theme automatically. */
+
+.dad-app {
+  display: flex;
+  width: 100%;
+  min-height: 100svh;
+  text-align: left;
+  align-items: stretch;
+}
+
+.dad-app-status {
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 24px;
+  box-sizing: border-box;
+  color: var(--text);
+}
+
+.dad-app-status-error p:first-child {
+  color: var(--text-h);
+  font-weight: 600;
+  font-size: 17px;
+}
+
+/* Sidebar ------------------------------------------------------------- */
+
+.dad-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dad-sidebar-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dad-sidebar-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-h);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dad-sidebar-subtitle {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.dad-sidebar-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dad-sidebar-link {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 16px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.dad-sidebar-link:hover {
+  background: var(--accent-bg);
+}
+
+.dad-sidebar-link.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Main content ---------------------------------------------------------- */
+
+.dad-main {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 40px;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+
+.dad-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1100px;
+}
+
+.dad-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.dad-page-header h1 {
+  font-size: 28px;
+  margin: 0;
+  text-align: left;
+  letter-spacing: normal;
+}
+
+.dad-page-note {
+  color: var(--text);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Period selector --------------------------------------------------- */
+
+.dad-period-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dad-period-btn {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.dad-period-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Section card ------------------------------------------------------- */
+
+.dad-section-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  background: var(--bg);
+  text-align: left;
+}
+
+.dad-section-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dad-section-card-header h2 {
+  margin: 0;
+  font-size: 19px;
+  text-align: left;
+}
+
+.dad-subheading {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-h);
+  margin: 16px 0 8px;
+}
+
+/* Stat cards ---------------------------------------------------------- */
+
+.dad-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.dad-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--code-bg);
+}
+
+.dad-stat-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dad-stat-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.dad-stat-meta {
+  font-size: 12px;
+  color: var(--text);
+}
+
+/* Weekly activity overview -------------------------------------------- */
+
+.dad-week-overview {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.dad-week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 40px;
+}
+
+.dad-week-day-label {
+  font-size: 12px;
+  color: var(--text);
+}
+
+.dad-week-day-dots {
+  display: flex;
+  gap: 3px;
+  min-height: 10px;
+  align-items: center;
+}
+
+.dad-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dad-dot-walk {
+  background: #3b82f6;
+}
+
+.dad-dot-run {
+  background: #f97316;
+}
+
+.dad-dot-gym {
+  background: var(--accent);
+}
+
+.dad-dot-none {
+  background: var(--border);
+}
+
+/* Trend charts (simple bars, mock/placeholder data) --------------------- */
+
+.dad-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.dad-chart-empty {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.dad-trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 140px;
+  padding-top: 20px;
+}
+
+.dad-trend-bar-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  height: 100%;
+  gap: 6px;
+}
+
+.dad-trend-bar-value {
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.dad-trend-bar {
+  width: 100%;
+  max-width: 28px;
+  background: var(--accent);
+  border-radius: 4px 4px 0 0;
+  min-height: 4px;
+}
+
+.dad-trend-bar-label {
+  font-size: 11px;
+  color: var(--text);
+}
+
+/* Recent / history lists ------------------------------------------------ */
+
+.dad-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dad-recent-item {
+  display: grid;
+  grid-template-columns: 170px 160px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.dad-recent-item:last-child {
+  border-bottom: none;
+}
+
+.dad-recent-date {
+  color: var(--text);
+}
+
+.dad-recent-type {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.dad-recent-summary {
+  color: var(--text-h);
+}
+
+.dad-history-item {
+  row-gap: 4px;
+}
+
+.dad-recent-comments {
+  grid-column: 1 / -1;
+  color: var(--text);
+  font-size: 13px;
+  font-style: italic;
+}
+
+.dad-edit-link {
+  grid-column: 1 / -1;
+  justify-self: end;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dad-edit-link:hover {
+  text-decoration: underline;
+}
+
+.dad-category-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* Empty states ------------------------------------------------------- */
+
+.dad-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 4px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.dad-btn-secondary {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.dad-btn-secondary:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* Action cards (quick-add buttons) -------------------------------------- */
+
+.dad-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.dad-action-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dad-action-card:hover {
+  border-color: var(--accent-border);
+  box-shadow: var(--shadow);
+}
+
+.dad-action-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.dad-action-subtitle {
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Filters ---------------------------------------------------------------- */
+
+.dad-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+/* Forms -------------------------------------------------------------- */
+
+.dad-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dad-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.dad-form-row label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.dad-form-row input,
+.dad-form-row select,
+.dad-form-row textarea {
+  font-size: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.dad-form-row input:focus,
+.dad-form-row select:focus,
+.dad-form-row textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.dad-form-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.dad-form-inline input {
+  flex: 1;
+}
+
+.dad-form-inline select {
+  width: 110px;
+}
+
+.dad-form-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.dad-form-error {
+  margin: 0;
+  font-size: 14px;
+  color: #ef4444;
+}
+
+.dad-btn-primary {
+  margin-top: 8px;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.dad-btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* Modal ---------------------------------------------------------------- */
+
+.dad-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.dad-modal {
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 24px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow);
+  text-align: left;
+}
+
+.dad-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.dad-modal-header h2 {
+  margin: 0;
+  font-size: 19px;
+  text-align: left;
+}
+
+.dad-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--text);
+  padding: 0 4px;
+  cursor: pointer;
+}
+
+/* Profile page ---------------------------------------------------------- */
+
+.dad-profile-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+}
+
+.dad-profile-row:last-child {
+  border-bottom: none;
+}
+
+.dad-profile-label {
+  color: var(--text);
+}
+
+/* Responsive: stack sidebar above content on small screens -------------- */
+
+@media (max-width: 768px) {
+  .dad-app {
+    flex-direction: column;
+  }
+
+  .dad-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dad-sidebar-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .dad-main {
+    padding: 24px 20px;
+  }
+
+  .dad-recent-item {
+    grid-template-columns: 1fr;
+    row-gap: 4px;
+  }
+}
