@@ -768,6 +768,27 @@
   width: 110px;
 }
 
+.dad-military-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dad-military-time input {
+  width: 64px;
+  text-align: center;
+}
+
+.dad-military-time-sep {
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.dad-military-time-hint {
+  font-size: 12px;
+  color: var(--text);
+}
+
 .dad-form-hint {
   margin: 0;
   font-size: 13px;
