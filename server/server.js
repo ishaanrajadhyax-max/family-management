@@ -21,6 +21,16 @@ import walkRunRouter from './routes/walkRun.js'
 import gymRouter from './routes/gym.js'
 import { requireAuth, requireAdmin } from './middleware/requireAuth.js'
 
+const isProduction = process.env.NODE_ENV === 'production'
+if (isProduction && !process.env.CORS_ORIGIN) {
+  throw new Error(
+    'Missing required environment variable: CORS_ORIGIN. ' +
+      'Set it to the deployed frontend\'s URL — without it, the server would ' +
+      'silently fall back to allowing only http://localhost:5173, and every ' +
+      'real browser request would fail with an unhelpful CORS error.',
+  )
+}
+
 const app = express()
 
 app.use(helmet())
@@ -58,5 +68,5 @@ app.use((err, _req, res, _next) => {
 
 const port = process.env.PORT || 4000
 app.listen(port, () => {
-  console.log(`family-manager API listening on http://localhost:${port}`)
+  console.log(`family-manager API listening on port ${port}`)
 })
