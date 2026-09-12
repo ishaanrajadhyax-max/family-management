@@ -21,7 +21,6 @@ import familyMembersRouter from './routes/familyMembers.js'
 import adminUsersRouter from './routes/adminUsers.js'
 import bloodSugarRouter from './routes/bloodSugar.js'
 import bloodPressureRouter from './routes/bloodPressure.js'
-import heartRateRouter from './routes/heartRate.js'
 import walkRunRouter from './routes/walkRun.js'
 import gymRouter from './routes/gym.js'
 import { requireAuth, requireAdmin } from './middleware/requireAuth.js'
@@ -61,7 +60,6 @@ app.use('/api/family-members', requireAdmin, familyMembersRouter)
 app.use('/api/admin/users', requireAdmin, adminUsersRouter)
 app.use('/api/blood-sugar-readings', bloodSugarRouter)
 app.use('/api/blood-pressure-readings', bloodPressureRouter)
-app.use('/api/heart-rate-readings', heartRateRouter)
 app.use('/api/walk-run-activities', walkRunRouter)
 app.use('/api/gym-activities', gymRouter)
 

@@ -1,5 +1,5 @@
 // Small date/time and formatting helpers shared across the Dad section.
-import type { Period } from './types'
+import type { Period, ChartInterval } from './types'
 
 function pad(n: number): string {
   return n.toString().padStart(2, '0')
@@ -167,4 +167,90 @@ export function buildDailyCountPoints<T extends { date: string }>(
   return Array.from(byDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, count]) => ({ label: formatShortDate(date), value: count }))
+}
+
+// Number of calendar days each bucket spans. 'monthly' is handled
+// separately below (calendar months, not fixed 30-day blocks).
+const INTERVAL_BUCKET_DAYS: Record<Exclude<ChartInterval, 'monthly'>, number> = {
+  daily: 1,
+  '3d': 3,
+  '5d': 5,
+  weekly: 7,
+  semimonthly: 15,
+}
+
+// Days since the Unix epoch (UTC midnight), used only to group dates into
+// fixed-size buckets — anchored globally so the grouping stays consistent
+// no matter which period is currently selected.
+function daysSinceEpoch(dateStr: string): number {
+  return Math.floor(new Date(`${dateStr}T00:00:00Z`).getTime() / 86_400_000)
+}
+
+function bucketKeyFor(dateStr: string, interval: ChartInterval): string {
+  if (interval === 'monthly') return dateStr.slice(0, 7) // 'YYYY-MM'
+  const bucketDays = INTERVAL_BUCKET_DAYS[interval]
+  return String(Math.floor(daysSinceEpoch(dateStr) / bucketDays))
+}
+
+function bucketLabelFor(earliestDate: string, interval: ChartInterval): string {
+  if (interval === 'monthly') {
+    const d = new Date(`${earliestDate}T00:00:00`)
+    return d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+  }
+  return formatShortDate(earliestDate)
+}
+
+function bucketEntriesByInterval<T extends { date: string }>(
+  entries: T[],
+  period: Period,
+  interval: ChartInterval,
+): Map<string, T[]> {
+  const buckets = new Map<string, T[]>()
+  entries
+    .filter((entry) => isWithinPeriod(entry.date, period))
+    .forEach((entry) => {
+      const key = bucketKeyFor(entry.date, interval)
+      const bucket = buckets.get(key) ?? []
+      bucket.push(entry)
+      buckets.set(key, bucket)
+    })
+  return buckets
+}
+
+// Like buildDailyAveragePoints, but groups entries into buckets sized by
+// `interval` (e.g. one point per week) instead of always one point per day —
+// used on the Insights page so a long period doesn't try to plot a point
+// for every single day.
+export function buildIntervalAveragePoints<T extends { date: string }>(
+  entries: T[],
+  period: Period,
+  interval: ChartInterval,
+  valueGetter: (entry: T) => number,
+): { label: string; value: number }[] {
+  const buckets = bucketEntriesByInterval(entries, period, interval)
+  return Array.from(buckets.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, items]) => {
+      const earliestDate = items.map((e) => e.date).sort()[0]
+      return {
+        label: bucketLabelFor(earliestDate, interval),
+        value: average(items.map(valueGetter)) ?? 0,
+      }
+    })
+}
+
+// Like buildIntervalAveragePoints, but counts entries per bucket instead of
+// averaging a value — used for "consistency" style charts (gym sessions).
+export function buildIntervalCountPoints<T extends { date: string }>(
+  entries: T[],
+  period: Period,
+  interval: ChartInterval,
+): { label: string; value: number }[] {
+  const buckets = bucketEntriesByInterval(entries, period, interval)
+  return Array.from(buckets.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, items]) => {
+      const earliestDate = items.map((e) => e.date).sort()[0]
+      return { label: bucketLabelFor(earliestDate, interval), value: items.length }
+    })
 }

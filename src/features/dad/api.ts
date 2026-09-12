@@ -108,34 +108,6 @@ export function updateBloodPressureReading(
   return apiFetch(`/blood-pressure-readings/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
 }
 
-export interface ApiHeartRateReading {
-  id: string
-  familyMemberId: string
-  recordedAt: string
-  value: number
-  comments: string | null
-}
-
-export function listHeartRateReadings(familyMemberId: string): Promise<ApiHeartRateReading[]> {
-  return apiFetch(`/heart-rate-readings?familyMemberId=${familyMemberId}`)
-}
-
-export function createHeartRateReading(payload: {
-  familyMemberId: string
-  recordedAt: string
-  value: number
-  comments?: string
-}): Promise<ApiHeartRateReading> {
-  return apiFetch('/heart-rate-readings', { method: 'POST', body: JSON.stringify(payload) })
-}
-
-export function updateHeartRateReading(
-  id: string,
-  payload: { recordedAt: string; value: number; comments?: string },
-): Promise<ApiHeartRateReading> {
-  return apiFetch(`/heart-rate-readings/${id}`, { method: 'PUT', body: JSON.stringify(payload) })
-}
-
 export interface ApiWalkRunActivity {
   id: string
   familyMemberId: string

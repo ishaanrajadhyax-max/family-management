@@ -15,7 +15,6 @@ import type { ReactNode } from 'react'
 import type {
   BloodSugarReading,
   BloodPressureReading,
-  HeartRateReading,
   WalkRunActivity,
   GymActivity,
   HistoryEntry,
@@ -26,18 +25,15 @@ import { byMostRecent, isoToIstDateTime, istDateTimeToIso } from './utils'
 interface DadDataContextValue {
   bloodSugarReadings: BloodSugarReading[]
   bloodPressureReadings: BloodPressureReading[]
-  heartRateReadings: HeartRateReading[]
   walkRunActivities: WalkRunActivity[]
   gymActivities: GymActivity[]
   historyEntries: HistoryEntry[]
   addBloodSugarReading: (entry: Omit<BloodSugarReading, 'id'>) => Promise<void>
   addBloodPressureReading: (entry: Omit<BloodPressureReading, 'id'>) => Promise<void>
-  addHeartRateReading: (entry: Omit<HeartRateReading, 'id'>) => Promise<void>
   addWalkRunActivity: (entry: Omit<WalkRunActivity, 'id'>) => Promise<void>
   addGymActivity: (entry: Omit<GymActivity, 'id'>) => Promise<void>
   updateBloodSugarReading: (id: string, entry: Omit<BloodSugarReading, 'id'>) => Promise<void>
   updateBloodPressureReading: (id: string, entry: Omit<BloodPressureReading, 'id'>) => Promise<void>
-  updateHeartRateReading: (id: string, entry: Omit<HeartRateReading, 'id'>) => Promise<void>
   updateWalkRunActivity: (id: string, entry: Omit<WalkRunActivity, 'id'>) => Promise<void>
   updateGymActivity: (id: string, entry: Omit<GymActivity, 'id'>) => Promise<void>
 }
@@ -56,7 +52,6 @@ interface DadDataProviderProps {
 export function DadDataProvider({ familyMemberId, children }: DadDataProviderProps) {
   const [bloodSugarReadings, setBloodSugarReadings] = useState<BloodSugarReading[]>([])
   const [bloodPressureReadings, setBloodPressureReadings] = useState<BloodPressureReading[]>([])
-  const [heartRateReadings, setHeartRateReadings] = useState<HeartRateReading[]>([])
   const [walkRunActivities, setWalkRunActivities] = useState<WalkRunActivity[]>([])
   const [gymActivities, setGymActivities] = useState<GymActivity[]>([])
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
@@ -68,10 +63,9 @@ export function DadDataProvider({ familyMemberId, children }: DadDataProviderPro
     async function loadEverything() {
       setStatus('loading')
       try {
-        const [sugar, pressure, heartRate, walkRun, gym] = await Promise.all([
+        const [sugar, pressure, walkRun, gym] = await Promise.all([
           api.listBloodSugarReadings(familyMemberId),
           api.listBloodPressureReadings(familyMemberId),
-          api.listHeartRateReadings(familyMemberId),
           api.listWalkRunActivities(familyMemberId),
           api.listGymActivities(familyMemberId),
         ])
@@ -93,12 +87,6 @@ export function DadDataProvider({ familyMemberId, children }: DadDataProviderPro
           systolic: r.systolic,
           diastolic: r.diastolic,
           pulse: r.pulse ?? undefined,
-          comments: r.comments ?? undefined,
-        })))
-        setHeartRateReadings(heartRate.map((r) => ({
-          id: r.id,
-          ...isoToIstDateTime(r.recordedAt),
-          value: r.value,
           comments: r.comments ?? undefined,
         })))
         setWalkRunActivities(walkRun.map((a) => {
@@ -214,35 +202,6 @@ export function DadDataProvider({ familyMemberId, children }: DadDataProviderPro
     })))
   }
 
-  const addHeartRateReading: DadDataContextValue['addHeartRateReading'] = async (entry) => {
-    const created = await api.createHeartRateReading({
-      familyMemberId,
-      recordedAt: istDateTimeToIso(entry.date, entry.time),
-      value: entry.value,
-      comments: entry.comments,
-    })
-    setHeartRateReadings((prev) => [...prev, {
-      id: created.id,
-      ...isoToIstDateTime(created.recordedAt),
-      value: created.value,
-      comments: created.comments ?? undefined,
-    }])
-  }
-
-  const updateHeartRateReading: DadDataContextValue['updateHeartRateReading'] = async (id, entry) => {
-    const updated = await api.updateHeartRateReading(id, {
-      recordedAt: istDateTimeToIso(entry.date, entry.time),
-      value: entry.value,
-      comments: entry.comments,
-    })
-    setHeartRateReadings((prev) => prev.map((r) => (r.id !== id ? r : {
-      id: updated.id,
-      ...isoToIstDateTime(updated.recordedAt),
-      value: updated.value,
-      comments: updated.comments ?? undefined,
-    })))
-  }
-
   const addWalkRunActivity: DadDataContextValue['addWalkRunActivity'] = async (entry) => {
     const created = await api.createWalkRunActivity({
       familyMemberId,
@@ -347,15 +306,6 @@ export function DadDataProvider({ familyMemberId, children }: DadDataProviderPro
         summary: `${r.systolic}/${r.diastolic} mmHg${r.pulse ? ` · ${r.pulse} bpm` : ''} (${r.readingContext})`,
         comments: r.comments,
       })),
-      ...heartRateReadings.map((r) => ({
-        id: r.id,
-        date: r.date,
-        time: r.time,
-        category: 'Health Reading' as const,
-        type: 'Heart Rate',
-        summary: `${r.value} BPM`,
-        comments: r.comments,
-      })),
       ...walkRunActivities.map((a) => ({
         id: a.id,
         date: a.date,
@@ -376,7 +326,7 @@ export function DadDataProvider({ familyMemberId, children }: DadDataProviderPro
       })),
     ]
     return entries.sort(byMostRecent)
-  }, [bloodSugarReadings, bloodPressureReadings, heartRateReadings, walkRunActivities, gymActivities])
+  }, [bloodSugarReadings, bloodPressureReadings, walkRunActivities, gymActivities])
 
   if (status === 'loading') {
     return <div className="dad-app-status">Loading…</div>
@@ -397,18 +347,15 @@ export function DadDataProvider({ familyMemberId, children }: DadDataProviderPro
   const value: DadDataContextValue = {
     bloodSugarReadings,
     bloodPressureReadings,
-    heartRateReadings,
     walkRunActivities,
     gymActivities,
     historyEntries,
     addBloodSugarReading,
     addBloodPressureReading,
-    addHeartRateReading,
     addWalkRunActivity,
     addGymActivity,
     updateBloodSugarReading,
     updateBloodPressureReading,
-    updateHeartRateReading,
     updateWalkRunActivity,
     updateGymActivity,
   }

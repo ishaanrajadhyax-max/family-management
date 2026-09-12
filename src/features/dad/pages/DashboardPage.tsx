@@ -6,6 +6,7 @@ import StatCard from '../components/StatCard'
 import SectionCard from '../components/SectionCard'
 import TrendChart from '../components/TrendChart'
 import EmptyState from '../components/EmptyState'
+import { BLOOD_SUGAR_Y_DOMAIN, SYSTOLIC_Y_DOMAIN } from '../chartConstants'
 import {
   byMostRecent,
   buildDailyAveragePoints,
@@ -21,7 +22,6 @@ export default function DashboardPage() {
   const {
     bloodSugarReadings,
     bloodPressureReadings,
-    heartRateReadings,
     walkRunActivities,
     gymActivities,
     historyEntries,
@@ -33,12 +33,10 @@ export default function DashboardPage() {
   // --- Today's Snapshot -----------------------------------------------
   const latestBloodSugar = [...bloodSugarReadings].sort(byMostRecent)[0]
   const latestBloodPressure = [...bloodPressureReadings].sort(byMostRecent)[0]
-  const latestHeartRate = [...heartRateReadings].sort(byMostRecent)[0]
 
   const todaysReadingsCount =
     bloodSugarReadings.filter((r) => r.date === today).length +
-    bloodPressureReadings.filter((r) => r.date === today).length +
-    heartRateReadings.filter((r) => r.date === today).length
+    bloodPressureReadings.filter((r) => r.date === today).length
 
   const todaysActivities = historyEntries.filter(
     (e) => e.category === 'Activity' && e.date === today,
@@ -81,7 +79,6 @@ export default function DashboardPage() {
   // --- Health Trends -----------------------------------------------------
   const bloodSugarTrend = buildDailyAveragePoints(bloodSugarReadings, period, (r) => r.value)
   const systolicTrend = buildDailyAveragePoints(bloodPressureReadings, period, (r) => r.systolic)
-  const heartRateTrend = buildDailyAveragePoints(heartRateReadings, period, (r) => r.value)
 
   // --- Recent entries ------------------------------------------------
   const recentEntries = historyEntries.slice(0, 6)
@@ -108,11 +105,6 @@ export default function DashboardPage() {
                 : 'No readings yet'
             }
             meta={latestBloodPressure ? formatTimeDisplay(latestBloodPressure.time) : undefined}
-          />
-          <StatCard
-            label="Latest Heart Rate"
-            value={latestHeartRate ? `${latestHeartRate.value} BPM` : 'No readings yet'}
-            meta={latestHeartRate ? formatTimeDisplay(latestHeartRate.time) : undefined}
           />
           <StatCard label="Today's Activity" value={todaysActivitySummary} />
           <StatCard label="Readings Recorded Today" value={String(todaysReadingsCount)} />
@@ -145,15 +137,21 @@ export default function DashboardPage() {
         <div className="dad-trend-grid">
           <div>
             <h3 className="dad-subheading">Blood Sugar</h3>
-            <TrendChart points={bloodSugarTrend} unit="mg/dL" emptyMessage="No blood sugar readings in this period." />
+            <TrendChart
+              points={bloodSugarTrend}
+              unit="mg/dL"
+              emptyMessage="No blood sugar readings in this period."
+              yDomain={BLOOD_SUGAR_Y_DOMAIN}
+            />
           </div>
           <div>
             <h3 className="dad-subheading">Blood Pressure (systolic)</h3>
-            <TrendChart points={systolicTrend} unit="mmHg" emptyMessage="No blood pressure readings in this period." />
-          </div>
-          <div>
-            <h3 className="dad-subheading">Heart Rate</h3>
-            <TrendChart points={heartRateTrend} unit="BPM" emptyMessage="No heart rate readings in this period." />
+            <TrendChart
+              points={systolicTrend}
+              unit="mmHg"
+              emptyMessage="No blood pressure readings in this period."
+              yDomain={SYSTOLIC_Y_DOMAIN}
+            />
           </div>
         </div>
       </SectionCard>

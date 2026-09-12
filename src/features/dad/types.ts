@@ -48,14 +48,6 @@ export interface BloodPressureReading {
   comments?: string
 }
 
-export interface HeartRateReading {
-  id: string
-  date: string
-  time: string
-  value: number // bpm
-  comments?: string
-}
-
 export interface WalkRunActivity {
   id: string
   activityType: ActivityType
@@ -86,6 +78,21 @@ export const PERIOD_LABELS: Record<Period, string> = {
   month: 'This month',
   '3m': 'Last 3 months',
   '6m': 'Last 6 months',
+}
+
+// How multiple readings within the selected period are grouped into one
+// chart point — e.g. "weekly" averages every 7 days together. Used on the
+// Insights page so a long period (like "Last 6 months") doesn't try to plot
+// a point per day.
+export type ChartInterval = 'daily' | '3d' | '5d' | 'weekly' | 'semimonthly' | 'monthly'
+
+export const CHART_INTERVAL_LABELS: Record<ChartInterval, string> = {
+  daily: 'Daily',
+  '3d': 'Every 3 Days',
+  '5d': 'Every 5 Days',
+  weekly: 'Weekly Average',
+  semimonthly: 'Semi-Monthly Average',
+  monthly: 'Monthly Average',
 }
 
 // A flattened, unified shape used by the History page and the

@@ -5,21 +5,18 @@ import SectionCard from '../components/SectionCard'
 import EmptyState from '../components/EmptyState'
 import BloodSugarForm from '../forms/BloodSugarForm'
 import BloodPressureForm from '../forms/BloodPressureForm'
-import HeartRateForm from '../forms/HeartRateForm'
 import { byMostRecent, formatDateDisplay, formatTimeDisplay } from '../utils'
-import type { BloodSugarReading, BloodPressureReading, HeartRateReading } from '../types'
+import type { BloodSugarReading, BloodPressureReading } from '../types'
 
 type ActiveForm =
   | { kind: 'add-blood-sugar' }
   | { kind: 'add-blood-pressure' }
-  | { kind: 'add-heart-rate' }
   | { kind: 'edit-blood-sugar'; record: BloodSugarReading }
   | { kind: 'edit-blood-pressure'; record: BloodPressureReading }
-  | { kind: 'edit-heart-rate'; record: HeartRateReading }
   | null
 
 export default function HealthReadingsPage() {
-  const { bloodSugarReadings, bloodPressureReadings, heartRateReadings } = useDadData()
+  const { bloodSugarReadings, bloodPressureReadings } = useDadData()
   const [activeForm, setActiveForm] = useState<ActiveForm>(null)
 
   const recentReadings = [
@@ -38,14 +35,6 @@ export default function HealthReadingsPage() {
       type: 'Blood Pressure',
       summary: `${r.systolic}/${r.diastolic} mmHg (${r.readingContext})`,
       onEdit: () => setActiveForm({ kind: 'edit-blood-pressure', record: r }),
-    })),
-    ...heartRateReadings.map((r) => ({
-      id: r.id,
-      date: r.date,
-      time: r.time,
-      type: 'Heart Rate',
-      summary: `${r.value} BPM`,
-      onEdit: () => setActiveForm({ kind: 'edit-heart-rate', record: r }),
     })),
   ]
     .sort(byMostRecent)
@@ -66,10 +55,6 @@ export default function HealthReadingsPage() {
           <button type="button" className="dad-action-card" onClick={() => setActiveForm({ kind: 'add-blood-pressure' })}>
             <span className="dad-action-title">Add Blood Pressure</span>
             <span className="dad-action-subtitle">Record systolic / diastolic</span>
-          </button>
-          <button type="button" className="dad-action-card" onClick={() => setActiveForm({ kind: 'add-heart-rate' })}>
-            <span className="dad-action-title">Add Heart Rate</span>
-            <span className="dad-action-subtitle">Record a BPM reading</span>
           </button>
         </div>
       </SectionCard>
@@ -109,11 +94,6 @@ export default function HealthReadingsPage() {
           <BloodPressureForm onSaved={() => setActiveForm(null)} />
         </Modal>
       )}
-      {activeForm?.kind === 'add-heart-rate' && (
-        <Modal title="Add Heart Rate" onClose={() => setActiveForm(null)}>
-          <HeartRateForm onSaved={() => setActiveForm(null)} />
-        </Modal>
-      )}
       {activeForm?.kind === 'edit-blood-sugar' && (
         <Modal title="Edit Blood Sugar" onClose={() => setActiveForm(null)}>
           <BloodSugarForm existing={activeForm.record} onSaved={() => setActiveForm(null)} />
@@ -122,11 +102,6 @@ export default function HealthReadingsPage() {
       {activeForm?.kind === 'edit-blood-pressure' && (
         <Modal title="Edit Blood Pressure" onClose={() => setActiveForm(null)}>
           <BloodPressureForm existing={activeForm.record} onSaved={() => setActiveForm(null)} />
-        </Modal>
-      )}
-      {activeForm?.kind === 'edit-heart-rate' && (
-        <Modal title="Edit Heart Rate" onClose={() => setActiveForm(null)}>
-          <HeartRateForm existing={activeForm.record} onSaved={() => setActiveForm(null)} />
         </Modal>
       )}
     </div>

@@ -5,7 +5,6 @@ import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
 import BloodSugarForm from '../forms/BloodSugarForm'
 import BloodPressureForm from '../forms/BloodPressureForm'
-import HeartRateForm from '../forms/HeartRateForm'
 import WalkRunForm from '../forms/WalkRunForm'
 import GymForm from '../forms/GymForm'
 import { formatDateDisplay, formatTimeDisplay } from '../utils'
@@ -13,14 +12,13 @@ import type { HistoryEntry } from '../types'
 
 type RecordTypeFilter = 'all' | 'Health Reading' | 'Activity'
 type ActivityTypeFilter = 'all' | 'Walking' | 'Running' | 'Gym'
-type HealthMetricFilter = 'all' | 'Blood Sugar' | 'Blood Pressure' | 'Heart Rate'
+type HealthMetricFilter = 'all' | 'Blood Sugar' | 'Blood Pressure'
 
 export default function HistoryPage() {
   const {
     historyEntries,
     bloodSugarReadings,
     bloodPressureReadings,
-    heartRateReadings,
     walkRunActivities,
     gymActivities,
   } = useDadData()
@@ -50,9 +48,6 @@ export default function HistoryPage() {
     : undefined
   const editingBloodPressure = editingEntry?.type === 'Blood Pressure'
     ? bloodPressureReadings.find((r) => r.id === editingEntry.id)
-    : undefined
-  const editingHeartRate = editingEntry?.type === 'Heart Rate'
-    ? heartRateReadings.find((r) => r.id === editingEntry.id)
     : undefined
   const editingWalkRun = editingEntry?.type === 'Walking' || editingEntry?.type === 'Running'
     ? walkRunActivities.find((a) => a.id === editingEntry.id)
@@ -115,7 +110,6 @@ export default function HistoryPage() {
                 <option value="all">All</option>
                 <option value="Blood Sugar">Blood Sugar</option>
                 <option value="Blood Pressure">Blood Pressure</option>
-                <option value="Heart Rate">Heart Rate</option>
               </select>
             </div>
           )}
@@ -161,11 +155,6 @@ export default function HistoryPage() {
       {editingBloodPressure && (
         <Modal title="Edit Blood Pressure" onClose={() => setEditingEntry(null)}>
           <BloodPressureForm existing={editingBloodPressure} onSaved={() => setEditingEntry(null)} />
-        </Modal>
-      )}
-      {editingHeartRate && (
-        <Modal title="Edit Heart Rate" onClose={() => setEditingEntry(null)}>
-          <HeartRateForm existing={editingHeartRate} onSaved={() => setEditingEntry(null)} />
         </Modal>
       )}
       {editingWalkRun && (

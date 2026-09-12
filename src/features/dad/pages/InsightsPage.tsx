@@ -1,69 +1,77 @@
 import { useState } from 'react'
 import { useDadData } from '../DadDataContext'
-import type { Period } from '../types'
+import type { Period, ChartInterval } from '../types'
 import PeriodSelector from '../components/PeriodSelector'
+import IntervalSelector from '../components/IntervalSelector'
 import SectionCard from '../components/SectionCard'
 import TrendChart from '../components/TrendChart'
-import { buildDailyAveragePoints, buildDailyCountPoints } from '../utils'
+import { BLOOD_SUGAR_Y_DOMAIN, SYSTOLIC_Y_DOMAIN, DIASTOLIC_Y_DOMAIN } from '../chartConstants'
+import { buildIntervalAveragePoints, buildIntervalCountPoints } from '../utils'
 
-// NOTE: All charts on this page read from the same in-memory data used
-// across the Dad section (see DadDataContext), which starts empty until
-// Dad records his own readings/activities. Once the backend + PostgreSQL
-// are connected, these `buildDaily...Points` calls will run against real
-// fetched data instead — no other change to this page should be needed.
 export default function InsightsPage() {
-  const { bloodSugarReadings, bloodPressureReadings, heartRateReadings, walkRunActivities, gymActivities } =
-    useDadData()
+  const { bloodSugarReadings, bloodPressureReadings, walkRunActivities, gymActivities } = useDadData()
 
   const [period, setPeriod] = useState<Period>('month')
+  const [chartInterval, setChartInterval] = useState<ChartInterval>('daily')
 
-  const bloodSugarTrend = buildDailyAveragePoints(bloodSugarReadings, period, (r) => r.value)
-  const systolicTrend = buildDailyAveragePoints(bloodPressureReadings, period, (r) => r.systolic)
-  const diastolicTrend = buildDailyAveragePoints(bloodPressureReadings, period, (r) => r.diastolic)
-  const heartRateTrend = buildDailyAveragePoints(heartRateReadings, period, (r) => r.value)
+  const bloodSugarTrend = buildIntervalAveragePoints(bloodSugarReadings, period, chartInterval, (r) => r.value)
+  const systolicTrend = buildIntervalAveragePoints(bloodPressureReadings, period, chartInterval, (r) => r.systolic)
+  const diastolicTrend = buildIntervalAveragePoints(bloodPressureReadings, period, chartInterval, (r) => r.diastolic)
 
-  const walkingDistanceTrend = buildDailyAveragePoints(
+  const walkingDistanceTrend = buildIntervalAveragePoints(
     walkRunActivities.filter((a) => a.activityType === 'Walking'),
     period,
+    chartInterval,
     (a) => a.distance,
   )
-  const runningDistanceTrend = buildDailyAveragePoints(
+  const runningDistanceTrend = buildIntervalAveragePoints(
     walkRunActivities.filter((a) => a.activityType === 'Running'),
     period,
+    chartInterval,
     (a) => a.distance,
   )
-  const gymConsistencyTrend = buildDailyCountPoints(gymActivities, period)
+  const gymConsistencyTrend = buildIntervalCountPoints(gymActivities, period, chartInterval)
 
   return (
     <div className="dad-page">
       <div className="dad-page-header">
         <h1>Insights</h1>
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <div className="dad-page-controls">
+          <PeriodSelector value={period} onChange={setPeriod} />
+          <IntervalSelector value={chartInterval} onChange={setChartInterval} />
+        </div>
       </div>
-      <p className="dad-page-note">
-        Charts below use placeholder/mock data for now. Once the backend and database are connected, these will
-        reflect real recorded values.
-      </p>
 
       <SectionCard title="Blood Sugar Trend">
-        <TrendChart points={bloodSugarTrend} unit="mg/dL" emptyMessage="No blood sugar readings in this period." />
+        <TrendChart
+          points={bloodSugarTrend}
+          unit="mg/dL"
+          emptyMessage="No blood sugar readings in this period."
+          yDomain={BLOOD_SUGAR_Y_DOMAIN}
+        />
       </SectionCard>
 
       <SectionCard title="Blood Pressure Trend">
         <div className="dad-trend-grid">
           <div>
             <h3 className="dad-subheading">Systolic</h3>
-            <TrendChart points={systolicTrend} unit="mmHg" emptyMessage="No readings in this period." />
+            <TrendChart
+              points={systolicTrend}
+              unit="mmHg"
+              emptyMessage="No readings in this period."
+              yDomain={SYSTOLIC_Y_DOMAIN}
+            />
           </div>
           <div>
             <h3 className="dad-subheading">Diastolic</h3>
-            <TrendChart points={diastolicTrend} unit="mmHg" emptyMessage="No readings in this period." />
+            <TrendChart
+              points={diastolicTrend}
+              unit="mmHg"
+              emptyMessage="No readings in this period."
+              yDomain={DIASTOLIC_Y_DOMAIN}
+            />
           </div>
         </div>
-      </SectionCard>
-
-      <SectionCard title="Heart Rate Trend">
-        <TrendChart points={heartRateTrend} unit="BPM" emptyMessage="No heart rate readings in this period." />
       </SectionCard>
 
       <SectionCard title="Walking / Running Activity">

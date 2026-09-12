@@ -172,6 +172,13 @@
   letter-spacing: normal;
 }
 
+.dad-page-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
 .dad-page-note {
   color: var(--text);
   font-size: 14px;
@@ -319,11 +326,11 @@
   background: var(--border);
 }
 
-/* Trend charts (simple bars, mock/placeholder data) --------------------- */
+/* Trend charts (line chart, plain SVG + HTML — no charting library) ----- */
 
 .dad-trend-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 24px;
 }
 
@@ -332,41 +339,108 @@
   font-size: 14px;
 }
 
-.dad-trend-bars {
+.dad-interval-selector {
   display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  height: 140px;
-  padding-top: 20px;
-}
-
-.dad-trend-bar-column {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-end;
-  flex: 1;
-  height: 100%;
-  gap: 6px;
+  gap: 8px;
 }
 
-.dad-trend-bar-value {
-  font-size: 11px;
+.dad-interval-selector label {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text);
   white-space: nowrap;
 }
 
-.dad-trend-bar {
-  width: 100%;
-  max-width: 28px;
-  background: var(--accent);
-  border-radius: 4px 4px 0 0;
-  min-height: 4px;
+.dad-interval-selector select {
+  font-size: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-family: inherit;
+  max-width: 100%;
 }
 
-.dad-trend-bar-label {
+.dad-trend-chart {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dad-trend-y-axis {
+  flex-shrink: 0;
+  height: 130px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
   font-size: 11px;
   color: var(--text);
+  text-align: right;
+  min-width: 0;
+}
+
+.dad-trend-y-axis span {
+  white-space: nowrap;
+}
+
+.dad-trend-plot-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dad-trend-plot {
+  position: relative;
+  height: 130px;
+}
+
+.dad-trend-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.dad-trend-line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.dad-trend-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+}
+
+.dad-trend-dot-out {
+  background: #ef4444;
+}
+
+.dad-trend-x-axis {
+  position: relative;
+  height: 20px;
+  margin-top: 6px;
+}
+
+.dad-trend-x-label {
+  position: absolute;
+  top: 0;
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
 }
 
 /* Recent / history lists ------------------------------------------------ */
@@ -785,21 +859,99 @@
 
   .dad-sidebar {
     width: 100%;
+    box-sizing: border-box;
     border-right: none;
     border-bottom: 1px solid var(--border);
+    padding: 16px;
+    gap: 14px;
+  }
+
+  .dad-sidebar-header {
+    padding: 0 0 12px;
+  }
+
+  .dad-sidebar-viewing {
+    padding: 0;
   }
 
   .dad-sidebar-nav {
     flex-direction: row;
     flex-wrap: wrap;
+    flex: none;
+    gap: 8px;
+  }
+
+  /* On desktop this is a full-width column of links; on mobile it needs to
+     be small wrapping chips instead — without this override, "width: 100%"
+     from the base rule forces every link onto its own full-width row here
+     too, turning the nav into a tall stack that pushes all page content
+     far down the screen before you can even see it. */
+  .dad-sidebar-link {
+    width: auto;
+    flex: 0 1 auto;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 14px;
+  }
+
+  .dad-sidebar-link.active {
+    border-color: var(--accent);
+  }
+
+  .dad-sidebar-logout {
+    margin: 0;
+    align-self: flex-start;
   }
 
   .dad-main {
-    padding: 24px 20px;
+    padding: 20px 16px;
+  }
+
+  .dad-page {
+    gap: 18px;
+  }
+
+  .dad-section-card {
+    padding: 16px;
   }
 
   .dad-recent-item {
     grid-template-columns: 1fr;
     row-gap: 4px;
+  }
+
+  .dad-profile-row {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+/* Extra-small phones (~375px and narrower) — force single-column grids
+   outright rather than relying on auto-fit to work it out, since gap +
+   padding rounding can otherwise leave a card just barely too wide and
+   clipped at the edge. */
+@media (max-width: 480px) {
+  .dad-page-header h1 {
+    font-size: 22px;
+  }
+
+  .dad-stat-grid,
+  .dad-trend-grid,
+  .dad-action-grid,
+  .dad-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dad-trend-y-axis {
+    font-size: 10px;
+  }
+
+  .dad-trend-x-label {
+    font-size: 10px;
+  }
+
+  .dad-modal {
+    padding: 18px;
   }
 }
