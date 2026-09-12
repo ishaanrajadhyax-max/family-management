@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "description": "Minimal API layer between the React frontend and the family_manager PostgreSQL database.",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node server.js"
   },

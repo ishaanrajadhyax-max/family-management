@@ -1,0 +1,27 @@
+# Render Blueprint for the family-manager backend.
+#
+# This declares the service configuration only — no secrets live here.
+# Both env vars below use `sync: false`, which means Render prompts for
+# their actual values in the dashboard when the Blueprint is first created;
+# they are never stored in this file or in git.
+#
+# Not deployed yet — this file is prepared ahead of time per Milestone 3.
+
+services:
+  - type: web
+    name: family-manager-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      # Neon's pooled connection string (postgresql://...?sslmode=require).
+      # Set manually in the Render dashboard — never committed.
+      - key: DATABASE_URL
+        sync: false
+      # The deployed frontend's URL, so CORS allows real browser requests.
+      # Unknown until Milestone 4 (frontend deploy) — set once that exists.
+      - key: CORS_ORIGIN
+        sync: false
