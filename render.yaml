@@ -1,11 +1,11 @@
 # Render Blueprint for the family-manager backend.
 #
 # This declares the service configuration only — no secrets live here.
-# Both env vars below use `sync: false`, which means Render prompts for
-# their actual values in the dashboard when the Blueprint is first created;
-# they are never stored in this file or in git.
+# DATABASE_URL, CORS_ORIGIN, and JWT_SECRET all use `sync: false`, meaning
+# Render prompts for their actual values in the dashboard; they are never
+# stored in this file or in git.
 #
-# Not deployed yet — this file is prepared ahead of time per Milestone 3.
+# Live: this service is deployed and auto-deploys from GitHub main.
 
 services:
   - type: web
