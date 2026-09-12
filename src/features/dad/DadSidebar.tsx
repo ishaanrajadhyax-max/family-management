@@ -1,6 +1,4 @@
 import type { DadPage } from './DadApp'
-import type { ApiFamilyMember } from './api'
-import type { CurrentUser } from '../auth/api'
 
 interface NavItem {
   page: DadPage
@@ -19,52 +17,17 @@ const NAV_ITEMS: NavItem[] = [
 interface DadSidebarProps {
   activePage: DadPage
   onNavigate: (page: DadPage) => void
-  currentUser: CurrentUser
-  onLogout: () => void
-  // Only provided for admin — lets Ishaan switch whose data is shown.
-  familyMembers?: ApiFamilyMember[]
-  viewingId: string
-  onChangeViewing: (id: string) => void
 }
 
-export default function DadSidebar({
-  activePage,
-  onNavigate,
-  currentUser,
-  onLogout,
-  familyMembers,
-  viewingId,
-  onChangeViewing,
-}: DadSidebarProps) {
-  const isAdmin = currentUser.role === 'admin'
-  const navItems = isAdmin ? [...NAV_ITEMS, { page: 'user-management' as const, label: 'User Management' }] : NAV_ITEMS
-
+export default function DadSidebar({ activePage, onNavigate }: DadSidebarProps) {
   return (
-    <nav className="dad-sidebar" aria-label="Family Management navigation">
+    <nav className="dad-sidebar" aria-label="Dad section navigation">
       <div className="dad-sidebar-header">
         <span className="dad-sidebar-title">Family Management</span>
-        <span className="dad-sidebar-subtitle">Signed in as {currentUser.name}</span>
+        <span className="dad-sidebar-subtitle">Dad's Dashboard</span>
       </div>
-
-      {familyMembers && familyMembers.length > 0 && (
-        <div className="dad-sidebar-viewing">
-          <label htmlFor="dad-viewing-select">Viewing</label>
-          <select
-            id="dad-viewing-select"
-            value={viewingId}
-            onChange={(e) => onChangeViewing(e.target.value)}
-          >
-            {familyMembers.map((member) => (
-              <option key={member.id} value={member.id}>
-                {member.name}{member.id === currentUser.id ? ' (you)' : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
       <ul className="dad-sidebar-nav">
-        {navItems.map((item) => (
+        {NAV_ITEMS.map((item) => (
           <li key={item.page}>
             <button
               type="button"
@@ -76,10 +39,6 @@ export default function DadSidebar({
           </li>
         ))}
       </ul>
-
-      <button type="button" className="dad-sidebar-logout" onClick={onLogout}>
-        Log Out
-      </button>
     </nav>
   )
 }

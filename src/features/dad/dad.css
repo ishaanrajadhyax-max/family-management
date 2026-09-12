@@ -64,31 +64,6 @@
   color: var(--text);
 }
 
-.dad-sidebar-viewing {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 0 12px;
-}
-
-.dad-sidebar-viewing label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.dad-sidebar-viewing select {
-  font-size: 15px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  color: var(--text-h);
-  font-family: inherit;
-}
-
 .dad-sidebar-nav {
   list-style: none;
   margin: 0;
@@ -121,23 +96,6 @@
   background: var(--accent-bg);
   color: var(--accent);
   font-weight: 600;
-}
-
-.dad-sidebar-logout {
-  margin: 0 12px;
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
-  font-size: 14px;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.dad-sidebar-logout:hover {
-  border-color: var(--accent-border);
-  color: var(--text-h);
 }
 
 /* Main content ---------------------------------------------------------- */
@@ -670,110 +628,6 @@
 
 .dad-profile-label {
   color: var(--text);
-}
-
-/* User management (admin) ------------------------------------------------ */
-
-.dad-btn-small {
-  margin-top: 0;
-  padding: 8px 14px;
-  font-size: 14px;
-}
-
-.dad-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.dad-user-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.dad-user-row {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-.dad-user-row:last-child {
-  border-bottom: none;
-}
-
-.dad-user-identity {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dad-user-name {
-  font-weight: 600;
-  color: var(--text-h);
-  font-size: 15px;
-}
-
-.dad-user-username {
-  font-size: 13px;
-  color: var(--text);
-}
-
-.dad-user-role-badge {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--code-bg);
-  color: var(--text-h);
-  white-space: nowrap;
-}
-
-.dad-status-badge {
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.dad-status-badge.active {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
-}
-
-.dad-status-badge.disabled {
-  background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
-}
-
-.dad-user-actions {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.dad-user-actions .dad-edit-link {
-  grid-column: unset;
-  justify-self: unset;
-}
-
-@media (max-width: 768px) {
-  .dad-user-row {
-    grid-template-columns: 1fr;
-    row-gap: 8px;
-  }
-
-  .dad-user-actions {
-    justify-content: flex-start;
-  }
 }
 
 /* Responsive: stack sidebar above content on small screens -------------- */

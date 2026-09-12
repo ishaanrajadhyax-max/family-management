@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { pool } from '../db.js'
-import { getScopedFamilyMemberId, canAccessFamilyMember } from '../auth/access.js'
 
 const router = Router()
 
@@ -24,9 +23,9 @@ function toApiShape(row) {
 // GET /api/walk-run-activities?familyMemberId=...
 router.get('/', async (req, res, next) => {
   try {
-    const familyMemberId = getScopedFamilyMemberId(req.user, req.query.familyMemberId)
+    const { familyMemberId } = req.query
     if (!familyMemberId) {
-      return res.status(403).json({ error: "Not authorized to view this family member's data" })
+      return res.status(400).json({ error: 'familyMemberId query parameter is required' })
     }
     const result = await pool.query(
       'SELECT * FROM walk_run_activities WHERE family_member_id = $1 ORDER BY recorded_at DESC',
@@ -58,11 +57,11 @@ function validateFields({ activityType, recordedAt, durationMinutes, distance, d
 // Body: { familyMemberId, activityType, recordedAt, durationMinutes, distance, distanceUnit, comments? }
 router.post('/', async (req, res, next) => {
   try {
-    const familyMemberId = getScopedFamilyMemberId(req.user, req.body.familyMemberId)
+    const { familyMemberId, activityType, recordedAt, durationMinutes, distance, distanceUnit, comments } = req.body
+
     if (!familyMemberId) {
-      return res.status(403).json({ error: 'Not authorized to add an activity for this family member' })
+      return res.status(400).json({ error: 'familyMemberId is required' })
     }
-    const { activityType, recordedAt, durationMinutes, distance, distanceUnit, comments } = req.body
     const validationError = validateFields(req.body)
     if (validationError) {
       return res.status(400).json({ error: validationError })
@@ -85,18 +84,8 @@ router.post('/', async (req, res, next) => {
 // Body: { activityType, recordedAt, durationMinutes, distance, distanceUnit, comments? }
 router.put('/:id', async (req, res, next) => {
   try {
-    const existing = await pool.query(
-      'SELECT family_member_id FROM walk_run_activities WHERE id = $1',
-      [req.params.id],
-    )
-    if (existing.rowCount === 0) {
-      return res.status(404).json({ error: 'Activity not found' })
-    }
-    if (!canAccessFamilyMember(req.user, existing.rows[0].family_member_id)) {
-      return res.status(403).json({ error: 'Not authorized to edit this activity' })
-    }
-
     const { activityType, recordedAt, durationMinutes, distance, distanceUnit, comments } = req.body
+
     const validationError = validateFields(req.body)
     if (validationError) {
       return res.status(400).json({ error: validationError })
@@ -109,6 +98,9 @@ router.put('/:id', async (req, res, next) => {
        RETURNING *`,
       [activityType, recordedAt, durationMinutes, distance, distanceUnit, comments || null, req.params.id],
     )
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Activity not found' })
+    }
     res.json(toApiShape(result.rows[0]))
   } catch (err) {
     next(err)
