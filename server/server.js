@@ -1,24 +1,30 @@
 // Minimal API layer: React frontend -> this server -> PostgreSQL (family_manager).
 //
-// Current phase: Dad-only, no login. The auth system built for Milestone 6
-// (JWT sessions, bcrypt, admin roles) is intentionally not wired up here —
-// its code still exists (server/auth/, server/middleware/requireAuth.js,
-// server/routes/auth.js, server/routes/adminUsers.js) but nothing imports
-// it, so nothing in family_members.username/password_hash/is_active is
-// read or enforced right now. Every route below is reachable directly,
-// scoped only by whatever familyMemberId the frontend sends — which, for
-// this phase, is always looked up as "whoever has role='dad'."
+// Auth model: a signed, httpOnly cookie identifies the caller (id, name,
+// role) on every request via requireAuth. Every health-data route below
+// that point enforces access itself (see auth/access.js) — Dad and Mom can
+// only ever act on their own family_member_id, Ishaan (admin) can act on
+// any of them. Nothing here trusts a client-supplied identity without
+// checking it against the session.
+//
+// Bootstrapping the very first admin: POST /api/auth/setup-admin (public,
+// self-limiting — see routes/auth.js) is the only way an admin account can
+// get credentials without already being logged in as one.
 import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import cookieParser from 'cookie-parser'
 import { pool } from './db.js'
+import authRouter from './routes/auth.js'
 import familyMembersRouter from './routes/familyMembers.js'
+import adminUsersRouter from './routes/adminUsers.js'
 import bloodSugarRouter from './routes/bloodSugar.js'
 import bloodPressureRouter from './routes/bloodPressure.js'
 import heartRateRouter from './routes/heartRate.js'
 import walkRunRouter from './routes/walkRun.js'
 import gymRouter from './routes/gym.js'
+import { requireAuth, requireAdmin } from './middleware/requireAuth.js'
 
 const isProduction = process.env.NODE_ENV === 'production'
 if (isProduction && !process.env.CORS_ORIGIN) {
@@ -35,7 +41,9 @@ const app = express()
 app.use(helmet())
 app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173', credentials: true }))
 app.use(express.json())
+app.use(cookieParser())
 
+// Public — no session required.
 app.get('/api/health', async (_req, res) => {
   try {
     await pool.query('SELECT 1')
@@ -44,8 +52,13 @@ app.get('/api/health', async (_req, res) => {
     res.status(503).json({ status: 'error', database: 'unreachable' })
   }
 })
+app.use('/api/auth', authRouter)
 
-app.use('/api/family-members', familyMembersRouter)
+// Everything below this line requires a valid session.
+app.use(requireAuth)
+
+app.use('/api/family-members', requireAdmin, familyMembersRouter)
+app.use('/api/admin/users', requireAdmin, adminUsersRouter)
 app.use('/api/blood-sugar-readings', bloodSugarRouter)
 app.use('/api/blood-pressure-readings', bloodPressureRouter)
 app.use('/api/heart-rate-readings', heartRateRouter)

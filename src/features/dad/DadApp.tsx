@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './dad.css'
+import { useAuth } from '../auth/AuthContext'
 import { DadDataProvider } from './DadDataContext'
 import DadSidebar from './DadSidebar'
 import DashboardPage from './pages/DashboardPage'
@@ -8,64 +9,61 @@ import ActivityPage from './pages/ActivityPage'
 import HistoryPage from './pages/HistoryPage'
 import InsightsPage from './pages/InsightsPage'
 import ProfilePage from './pages/ProfilePage'
+import UserManagementPage from '../admin/UserManagementPage'
 import * as api from './api'
 import type { ApiFamilyMember } from './api'
 
-export type DadPage = 'dashboard' | 'health-readings' | 'activity' | 'history' | 'insights' | 'profile'
+export type DadPage =
+  | 'dashboard'
+  | 'health-readings'
+  | 'activity'
+  | 'history'
+  | 'insights'
+  | 'profile'
+  | 'user-management'
 
-// Top-level shell — the name is historical (this started as Dad-only, and
-// for this phase it's Dad-only again: no login, no roles). On load, it
-// looks up whichever family_members row has role='dad' and uses that id
-// for everything — there's no session/identity concept in this phase.
+// Top-level shell — the name is historical (this started as Dad-only). The
+// same pages/components now serve whoever is logged in: Dad and Mom always
+// view their own data; Ishaan (admin) can switch which family member he's
+// viewing/managing via the sidebar. The server enforces these boundaries
+// independently on every request (see server/auth/access.js) — this
+// component only decides what to *ask* for.
 export default function DadApp() {
+  const { user, logout } = useAuth()
   const [activePage, setActivePage] = useState<DadPage>('dashboard')
-  const [dadMember, setDadMember] = useState<ApiFamilyMember | null>(null)
-  const [loadError, setLoadError] = useState('')
+  const [familyMembers, setFamilyMembers] = useState<ApiFamilyMember[]>([])
+  const [viewingId, setViewingId] = useState(user!.id)
+
+  const isAdmin = user!.role === 'admin'
 
   useEffect(() => {
-    let cancelled = false
-    api
-      .getFamilyMembers()
-      .then((members) => {
-        if (cancelled) return
-        const dad = members.find((m) => m.role === 'dad')
-        if (!dad) {
-          throw new Error("No family member with role 'dad' exists in the database yet.")
-        }
-        setDadMember(dad)
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setLoadError(err instanceof Error ? err.message : 'Failed to load.')
-      })
-    return () => {
-      cancelled = true
+    if (isAdmin) {
+      api.getFamilyMembers().then(setFamilyMembers).catch(() => setFamilyMembers([]))
     }
-  }, [])
+  }, [isAdmin])
 
-  if (loadError) {
-    return (
-      <div className="dad-app-status dad-app-status-error">
-        <p>Couldn't load the app.</p>
-        <p className="dad-form-hint">{loadError}</p>
-      </div>
-    )
-  }
-  if (!dadMember) {
-    return <div className="dad-app-status">Loading…</div>
-  }
+  const viewingMember = familyMembers.find((m) => m.id === viewingId) ?? user!
 
   return (
-    <DadDataProvider familyMemberId={dadMember.id}>
+    <DadDataProvider familyMemberId={viewingId}>
       <div className="dad-app">
-        <DadSidebar activePage={activePage} onNavigate={setActivePage} />
+        <DadSidebar
+          activePage={activePage}
+          onNavigate={setActivePage}
+          currentUser={user!}
+          onLogout={logout}
+          familyMembers={isAdmin ? familyMembers : undefined}
+          viewingId={viewingId}
+          onChangeViewing={setViewingId}
+        />
         <main className="dad-main">
           {activePage === 'dashboard' && <DashboardPage />}
           {activePage === 'health-readings' && <HealthReadingsPage />}
           {activePage === 'activity' && <ActivityPage />}
           {activePage === 'history' && <HistoryPage />}
           {activePage === 'insights' && <InsightsPage />}
-          {activePage === 'profile' && <ProfilePage member={dadMember} />}
+          {activePage === 'profile' && <ProfilePage member={viewingMember} />}
+          {activePage === 'user-management' && isAdmin && <UserManagementPage />}
         </main>
       </div>
     </DadDataProvider>

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { pool } from '../db.js'
+import { getScopedFamilyMemberId, canAccessFamilyMember } from '../auth/access.js'
 
 const router = Router()
 
@@ -22,9 +23,9 @@ function toApiShape(row) {
 // GET /api/blood-pressure-readings?familyMemberId=...
 router.get('/', async (req, res, next) => {
   try {
-    const { familyMemberId } = req.query
+    const familyMemberId = getScopedFamilyMemberId(req.user, req.query.familyMemberId)
     if (!familyMemberId) {
-      return res.status(400).json({ error: 'familyMemberId query parameter is required' })
+      return res.status(403).json({ error: "Not authorized to view this family member's data" })
     }
     const result = await pool.query(
       'SELECT * FROM blood_pressure_readings WHERE family_member_id = $1 ORDER BY recorded_at DESC',
@@ -53,11 +54,11 @@ function validateFields({ recordedAt, readingContext, systolic, diastolic }) {
 // Body: { familyMemberId, recordedAt, readingContext, systolic, diastolic, pulse?, comments? }
 router.post('/', async (req, res, next) => {
   try {
-    const { familyMemberId, recordedAt, readingContext, systolic, diastolic, pulse, comments } = req.body
-
+    const familyMemberId = getScopedFamilyMemberId(req.user, req.body.familyMemberId)
     if (!familyMemberId) {
-      return res.status(400).json({ error: 'familyMemberId is required' })
+      return res.status(403).json({ error: 'Not authorized to add a reading for this family member' })
     }
+    const { recordedAt, readingContext, systolic, diastolic, pulse, comments } = req.body
     const validationError = validateFields(req.body)
     if (validationError) {
       return res.status(400).json({ error: validationError })
@@ -80,8 +81,18 @@ router.post('/', async (req, res, next) => {
 // Body: { recordedAt, readingContext, systolic, diastolic, pulse?, comments? }
 router.put('/:id', async (req, res, next) => {
   try {
-    const { recordedAt, readingContext, systolic, diastolic, pulse, comments } = req.body
+    const existing = await pool.query(
+      'SELECT family_member_id FROM blood_pressure_readings WHERE id = $1',
+      [req.params.id],
+    )
+    if (existing.rowCount === 0) {
+      return res.status(404).json({ error: 'Reading not found' })
+    }
+    if (!canAccessFamilyMember(req.user, existing.rows[0].family_member_id)) {
+      return res.status(403).json({ error: 'Not authorized to edit this reading' })
+    }
 
+    const { recordedAt, readingContext, systolic, diastolic, pulse, comments } = req.body
     const validationError = validateFields(req.body)
     if (validationError) {
       return res.status(400).json({ error: validationError })
@@ -94,9 +105,6 @@ router.put('/:id', async (req, res, next) => {
        RETURNING *`,
       [recordedAt, readingContext, systolic, diastolic, pulse || null, comments || null, req.params.id],
     )
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Reading not found' })
-    }
     res.json(toApiShape(result.rows[0]))
   } catch (err) {
     next(err)
