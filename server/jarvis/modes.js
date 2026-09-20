@@ -1,9 +1,36 @@
-// Jarvis's specialist modes. Each mode is a system prompt plus a tool
-// list — the tool list is what makes this extensible: General and Style
-// ship with none for the MVP, but News is wired to *pass* a tools array
-// through the same request shape a real web-search tool will later use.
-// Adding live search later means filling in `tools` here and a handler in
-// anthropicClient.js — not touching the chat pipeline itself.
+// Jarvis's specialist modes. Each mode is a system prompt plus a
+// mode-specific tool list — the tool list is what makes this extensible:
+// General and Style ship with none of their own for the MVP, but News is
+// wired to *pass* a tools array through the same request shape a real
+// web-search tool will later use. Adding live search later means filling
+// in `tools` here and a handler in anthropicClient.js's tool-execution
+// loop — not touching the chat pipeline itself.
+//
+// COMMON_TOOLS are available in every mode regardless — currently just
+// remember_fact, which is how Jarvis's persistent memory (see
+// jarvis_memory in db/migrations/004_jarvis.sql) actually gets written:
+// the model decides something is worth remembering and calls the tool: no
+// separate "memory extraction" pass, no manual save button.
+export const COMMON_TOOLS = [
+  {
+    name: 'remember_fact',
+    description:
+      "Save a fact, preference, or piece of context about this person that's worth recalling in " +
+      'future conversations — not just this one. Use it when they share something durable (a ' +
+      'preference, a recurring detail, an important fact about their life), not for one-off details ' +
+      "that only matter to the current message.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        fact: {
+          type: 'string',
+          description: 'The fact to remember, written as a short, self-contained statement.',
+        },
+      },
+      required: ['fact'],
+    },
+  },
+]
 
 export const JARVIS_MODES = {
   general: {
@@ -46,4 +73,8 @@ export const DEFAULT_JARVIS_MODE = 'general'
 
 export function isValidJarvisMode(mode) {
   return Object.prototype.hasOwnProperty.call(JARVIS_MODES, mode)
+}
+
+export function getToolsForMode(mode) {
+  return [...COMMON_TOOLS, ...JARVIS_MODES[mode].tools]
 }

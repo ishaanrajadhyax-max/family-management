@@ -213,6 +213,29 @@
   padding: 3px 10px;
 }
 
+.jarvis-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.jarvis-icon-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--j-border);
+  background: var(--j-bg-elevated);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.jarvis-icon-btn.active {
+  border-color: var(--j-accent-border);
+  background: var(--j-accent-dim);
+}
+
 .jarvis-messages {
   flex: 1;
   min-height: 0;
@@ -276,11 +299,31 @@
   border: 1px solid var(--j-border);
 }
 
+.jarvis-message-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  padding: 0 4px;
+}
+
 .jarvis-message-time {
   font-size: 11px;
   color: var(--j-text);
-  margin-top: 3px;
-  padding: 0 4px;
+}
+
+.jarvis-message-replay {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.jarvis-message-replay:hover {
+  opacity: 1;
 }
 
 .jarvis-message-typing {
@@ -364,6 +407,122 @@
 .jarvis-composer-send:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+.jarvis-mic-btn {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--j-border);
+  background: var(--j-bg-elevated);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.jarvis-mic-btn.listening {
+  border-color: var(--j-accent-border);
+  background: var(--j-accent-dim);
+  animation: jarvis-pulse 1.4s infinite ease-in-out;
+}
+
+@keyframes jarvis-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--j-accent-dim);
+  }
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* Memory panel modal ------------------------------------------------- */
+
+.jarvis-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.jarvis-modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--j-bg-panel);
+  border: 1px solid var(--j-border);
+  border-radius: 12px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.jarvis-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.jarvis-modal-header h2 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--j-text-h);
+}
+
+.jarvis-modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--j-text);
+  cursor: pointer;
+}
+
+.jarvis-modal-hint {
+  font-size: 13px;
+  color: var(--j-text);
+  margin: 0;
+}
+
+.jarvis-memory-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jarvis-memory-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--j-bg-elevated);
+  font-size: 13px;
+  color: var(--j-text-h);
+}
+
+.jarvis-memory-forget {
+  flex-shrink: 0;
+  border: 1px solid var(--j-border);
+  background: transparent;
+  color: var(--j-text);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.jarvis-memory-forget:hover {
+  border-color: #f87171;
+  color: #f87171;
 }
 
 /* Responsive: stack sidebar above chat, sidebar becomes a compact

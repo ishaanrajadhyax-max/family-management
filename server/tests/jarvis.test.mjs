@@ -186,3 +186,39 @@ test('sending a message without ANTHROPIC_API_KEY configured fails gracefully wi
     assert.match(body.error, /ANTHROPIC_API_KEY/)
   }
 })
+
+test('memory starts empty and a saved fact can be listed then deleted', async () => {
+  const empty = await api('/api/jarvis/memory', { cookie: otherCookie })
+  assert.equal(empty.status, 200)
+  assert.equal(empty.body.length, 0)
+
+  const inserted = await pool.query(
+    'INSERT INTO jarvis_memory (family_member_id, content) VALUES ($1, $2) RETURNING id',
+    [otherFixture.id, 'Prefers tea over coffee'],
+  )
+  const memoryId = inserted.rows[0].id
+
+  const list = await api('/api/jarvis/memory', { cookie: otherCookie })
+  assert.equal(list.status, 200)
+  assert.ok(list.body.some((m) => m.id === memoryId && m.content === 'Prefers tea over coffee'))
+
+  const del = await api(`/api/jarvis/memory/${memoryId}`, { method: 'DELETE', cookie: otherCookie })
+  assert.equal(del.status, 204)
+
+  const afterDelete = await api('/api/jarvis/memory', { cookie: otherCookie })
+  assert.ok(!afterDelete.body.some((m) => m.id === memoryId))
+})
+
+test("a person cannot delete another person's memory entry", async () => {
+  const inserted = await pool.query(
+    'INSERT INTO jarvis_memory (family_member_id, content) VALUES ($1, $2) RETURNING id',
+    [dadFixture.id, "Dad's private fact"],
+  )
+  const memoryId = inserted.rows[0].id
+
+  const del = await api(`/api/jarvis/memory/${memoryId}`, { method: 'DELETE', cookie: otherCookie })
+  assert.equal(del.status, 404)
+
+  const stillThere = await pool.query('SELECT id FROM jarvis_memory WHERE id = $1', [memoryId])
+  assert.equal(stillThere.rowCount, 1)
+})

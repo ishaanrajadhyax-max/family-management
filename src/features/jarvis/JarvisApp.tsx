@@ -3,6 +3,8 @@ import * as api from './api'
 import type { JarvisConversation, JarvisMessage, JarvisMode, JarvisModeInfo } from './api'
 import ConversationSidebar from './ConversationSidebar'
 import ChatView from './ChatView'
+import MemoryPanel from './MemoryPanel'
+import { useSpeechOutput } from './useSpeechOutput'
 import './jarvis.css'
 
 // Jarvis's own top-level view — a distinct UI from the Family Management
@@ -24,6 +26,9 @@ export default function JarvisApp() {
   const [messagesLoading, setMessagesLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState('')
+  const [speakEnabled, setSpeakEnabled] = useState(false)
+  const [memoryPanelOpen, setMemoryPanelOpen] = useState(false)
+  const speechOutput = useSpeechOutput()
 
   useEffect(() => {
     let cancelled = false
@@ -108,6 +113,7 @@ export default function JarvisApp() {
       }
 
       const { userMessage, assistantMessage } = await api.sendMessage(conversationId, content)
+      if (speakEnabled) speechOutput.speak(assistantMessage.content)
       if (isNewConversation) {
         setMessages([userMessage, assistantMessage])
       } else {
@@ -172,7 +178,14 @@ export default function JarvisApp() {
         onSend={handleSend}
         sending={sending}
         error={sendError}
+        speakEnabled={speakEnabled}
+        onToggleSpeak={() => {
+          if (speakEnabled) speechOutput.stop()
+          setSpeakEnabled((v) => !v)
+        }}
+        onOpenMemory={() => setMemoryPanelOpen(true)}
       />
+      {memoryPanelOpen && <MemoryPanel onClose={() => setMemoryPanelOpen(false)} />}
     </div>
   )
 }

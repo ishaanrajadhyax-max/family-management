@@ -128,11 +128,19 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
       [req.params.id],
     )
 
-    // Memory injection point for Day 2 — empty for now (see
-    // jarvis/anthropicClient.js's buildSystemPrompt).
+    // Most recent facts first, capped — a short list injected into the
+    // system prompt, not a retrieval/RAG system (see jarvis_memory in
+    // db/migrations/004_jarvis.sql for why it's deliberately this simple).
+    const memoryResult = await pool.query(
+      'SELECT content FROM jarvis_memory WHERE family_member_id = $1 ORDER BY updated_at DESC LIMIT 30',
+      [req.user.id],
+    )
+
     const replyText = await getJarvisReply({
       mode: conversation.mode,
       history: historyResult.rows,
+      memoryFacts: memoryResult.rows.map((r) => r.content).reverse(),
+      familyMemberId: req.user.id,
     })
 
     const assistantMessageResult = await pool.query(
@@ -156,6 +164,42 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
       userMessage: toMessageShape(userMessageResult.rows[0]),
       assistantMessage: toMessageShape(assistantMessageResult.rows[0]),
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+function toMemoryShape(row) {
+  return { id: row.id, content: row.content, createdAt: row.created_at }
+}
+
+// GET /api/jarvis/memory — what Jarvis currently remembers about the
+// caller, most recent first. Lets them see (and, via DELETE below,
+// remove) what's being fed into every conversation's system prompt,
+// rather than memory being an invisible black box.
+router.get('/memory', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM jarvis_memory WHERE family_member_id = $1 ORDER BY updated_at DESC',
+      [req.user.id],
+    )
+    res.json(result.rows.map(toMemoryShape))
+  } catch (err) {
+    next(err)
+  }
+})
+
+// DELETE /api/jarvis/memory/:id
+router.delete('/memory/:id', async (req, res, next) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM jarvis_memory WHERE id = $1 AND family_member_id = $2 RETURNING id',
+      [req.params.id, req.user.id],
+    )
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Memory entry not found' })
+    }
+    res.status(204).end()
   } catch (err) {
     next(err)
   }
