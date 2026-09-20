@@ -3,9 +3,12 @@ import * as api from './api'
 import type { JarvisConversation, JarvisMessage, JarvisMode, JarvisModeInfo } from './api'
 import ConversationSidebar from './ConversationSidebar'
 import ChatView from './ChatView'
+import VoiceConversationView from './VoiceConversationView'
 import MemoryPanel from './MemoryPanel'
 import { useSpeechOutput } from './useSpeechOutput'
 import './jarvis.css'
+
+type ViewMode = 'chat' | 'voice'
 
 // Jarvis's own top-level view — a distinct UI from the Family Management
 // section (see jarvis.css for the visual identity), but built the same
@@ -28,6 +31,7 @@ export default function JarvisApp() {
   const [sendError, setSendError] = useState('')
   const [speakEnabled, setSpeakEnabled] = useState(false)
   const [memoryPanelOpen, setMemoryPanelOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('chat')
   const speechOutput = useSpeechOutput()
 
   useEffect(() => {
@@ -113,7 +117,10 @@ export default function JarvisApp() {
       }
 
       const { userMessage, assistantMessage } = await api.sendMessage(conversationId, content)
-      if (speakEnabled) speechOutput.speak(assistantMessage.content)
+      // Voice mode always speaks its own replies (see
+      // VoiceConversationView) — only trigger it here for chat mode's
+      // separate speak toggle, so a reply isn't spoken twice.
+      if (viewMode === 'chat' && speakEnabled) speechOutput.speak(assistantMessage.content)
       if (isNewConversation) {
         setMessages([userMessage, assistantMessage])
       } else {
@@ -170,21 +177,34 @@ export default function JarvisApp() {
         onSelectConversation={handleSelectConversation}
         onNewConversation={handleNewConversation}
       />
-      <ChatView
-        conversation={activeConversation}
-        modeLabel={modes.find((m) => m.id === (activeConversation?.mode ?? selectedMode))?.label}
-        messages={displayedMessages}
-        messagesLoading={messagesLoading}
-        onSend={handleSend}
-        sending={sending}
-        error={sendError}
-        speakEnabled={speakEnabled}
-        onToggleSpeak={() => {
-          if (speakEnabled) speechOutput.stop()
-          setSpeakEnabled((v) => !v)
-        }}
-        onOpenMemory={() => setMemoryPanelOpen(true)}
-      />
+      {viewMode === 'chat' ? (
+        <ChatView
+          conversation={activeConversation}
+          modeLabel={modes.find((m) => m.id === (activeConversation?.mode ?? selectedMode))?.label}
+          messages={displayedMessages}
+          messagesLoading={messagesLoading}
+          onSend={handleSend}
+          sending={sending}
+          error={sendError}
+          speakEnabled={speakEnabled}
+          onToggleSpeak={() => {
+            if (speakEnabled) speechOutput.stop()
+            setSpeakEnabled((v) => !v)
+          }}
+          onOpenMemory={() => setMemoryPanelOpen(true)}
+          onEnterVoice={() => setViewMode('voice')}
+        />
+      ) : (
+        <VoiceConversationView
+          conversation={activeConversation}
+          modeLabel={modes.find((m) => m.id === (activeConversation?.mode ?? selectedMode))?.label}
+          messages={displayedMessages}
+          onSend={handleSend}
+          sending={sending}
+          error={sendError}
+          onExit={() => setViewMode('chat')}
+        />
+      )}
       {memoryPanelOpen && <MemoryPanel onClose={() => setMemoryPanelOpen(false)} />}
     </div>
   )

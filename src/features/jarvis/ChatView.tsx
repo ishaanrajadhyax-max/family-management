@@ -16,6 +16,7 @@ interface ChatViewProps {
   speakEnabled: boolean
   onToggleSpeak: () => void
   onOpenMemory: () => void
+  onEnterVoice: () => void
 }
 
 export default function ChatView({
@@ -28,6 +29,7 @@ export default function ChatView({
   error,
   speakEnabled,
   onToggleSpeak,
+  onEnterVoice,
   onOpenMemory,
 }: ChatViewProps) {
   const [draft, setDraft] = useState('')
@@ -84,6 +86,11 @@ export default function ChatView({
           <button type="button" className="jarvis-icon-btn" onClick={onOpenMemory} title="What Jarvis remembers">
             🧠
           </button>
+          {voiceCapture.isSupported && (
+            <button type="button" className="jarvis-icon-btn" onClick={onEnterVoice} title="Voice conversation">
+              📞
+            </button>
+          )}
         </div>
       </div>
 
