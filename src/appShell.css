@@ -1,0 +1,61 @@
+/* Top-level shell: a thin tab bar switching between Jarvis (the new
+   primary interface) and Family Management (the original app, mounted
+   unchanged). Deliberately minimal — each section owns its own visual
+   identity below this bar. */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  width: 100%;
+}
+
+.app-shell-tabs {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  background: #05070c;
+  border-bottom: 1px solid #1f2a3d;
+  box-sizing: border-box;
+}
+
+.app-shell-tab {
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #8a97ac;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.app-shell-tab:hover {
+  color: #e6edf5;
+}
+
+.app-shell-tab.active {
+  background: rgba(34, 211, 238, 0.14);
+  border-color: rgba(34, 211, 238, 0.4);
+  color: #22d3ee;
+}
+
+.app-shell-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+@media (max-width: 480px) {
+  .app-shell-tabs {
+    padding: 8px;
+  }
+
+  .app-shell-tab {
+    flex: 1;
+    text-align: center;
+    padding: 8px 10px;
+  }
+}

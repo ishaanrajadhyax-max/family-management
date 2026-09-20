@@ -35,6 +35,7 @@ import bloodSugarRouter from './routes/bloodSugar.js'
 import bloodPressureRouter from './routes/bloodPressure.js'
 import walkRunRouter from './routes/walkRun.js'
 import gymRouter from './routes/gym.js'
+import jarvisRouter from './routes/jarvis.js'
 import { requireAuth, requireAdmin } from './middleware/requireAuth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -93,6 +94,7 @@ app.use('/api/blood-sugar-readings', bloodSugarRouter)
 app.use('/api/blood-pressure-readings', bloodPressureRouter)
 app.use('/api/walk-run-activities', walkRunRouter)
 app.use('/api/gym-activities', gymRouter)
+app.use('/api/jarvis', jarvisRouter)
 
 // Centralized error handler — keeps route handlers free of repeated
 // try/catch boilerplate for the "something unexpected broke" case.

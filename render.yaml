@@ -58,6 +58,11 @@ services:
       # fresh random value for production — do not reuse the local one.
       - key: JWT_SECRET
         sync: false
+      # Powers Jarvis (AI chat) via the Anthropic API. From
+      # console.anthropic.com -> API Keys. The rest of the app works fine
+      # without this set — only /api/jarvis/* returns a 503 until it is.
+      - key: ANTHROPIC_API_KEY
+        sync: false
       # Cookie security depends on this — enables `secure`, required for a
       # real HTTPS cookie in production.
       - key: NODE_ENV
