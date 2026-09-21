@@ -1,7 +1,5 @@
-/* Top-level shell: a thin tab bar switching between Jarvis (the new
-   primary interface) and Family Management (the original app, mounted
-   unchanged). Deliberately minimal — each section owns its own visual
-   identity below this bar. */
+/* Top-level shell. Jarvis fills the screen and carries its own header; Family
+   Management sits under this slim bar, which is the way back to Jarvis. */
 
 .app-shell {
   display: flex;
@@ -10,36 +8,64 @@
   width: 100%;
 }
 
+.app-shell-jarvis {
+  height: 100svh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--j-bg);
+}
+
 .app-shell-tabs {
   flex-shrink: 0;
   display: flex;
   gap: 4px;
-  padding: 8px 12px;
-  background: #05070c;
-  border-bottom: 1px solid #1f2a3d;
+  padding: 8px 14px;
+  background: var(--j-bg);
+  border-bottom: 1px solid var(--j-line);
   box-sizing: border-box;
 }
 
 .app-shell-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   padding: 7px 16px;
-  border-radius: 999px;
+  border-radius: var(--j-radius);
   border: 1px solid transparent;
   background: transparent;
-  color: #8a97ac;
-  font-family: var(--sans);
-  font-size: 13px;
-  font-weight: 600;
+  color: var(--j-muted);
+  font-family: var(--j-font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.14em;
   cursor: pointer;
+  transition:
+    color var(--j-dur-fast) var(--j-ease),
+    background var(--j-dur) var(--j-ease),
+    border-color var(--j-dur) var(--j-ease);
 }
 
 .app-shell-tab:hover {
-  color: #e6edf5;
+  color: var(--j-text-h);
+  background: rgba(34, 211, 238, 0.06);
 }
 
 .app-shell-tab.active {
-  background: rgba(34, 211, 238, 0.14);
-  border-color: rgba(34, 211, 238, 0.4);
-  color: #22d3ee;
+  background: rgba(34, 211, 238, 0.12);
+  border-color: var(--j-line-strong);
+  color: var(--j-cyan);
+  cursor: default;
+}
+
+.app-shell-tab:focus-visible {
+  outline: 2px solid var(--j-cyan);
+  outline-offset: 2px;
+}
+
+.app-shell-mark {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--j-cyan);
+  border-radius: 50%;
 }
 
 .app-shell-body {
@@ -55,7 +81,8 @@
 
   .app-shell-tab {
     flex: 1;
-    text-align: center;
+    justify-content: center;
     padding: 8px 10px;
+    font-size: 10.5px;
   }
 }

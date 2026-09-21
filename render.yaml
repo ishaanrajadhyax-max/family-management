@@ -58,9 +58,19 @@ services:
       # fresh random value for production — do not reuse the local one.
       - key: JWT_SECRET
         sync: false
-      # Powers Jarvis (AI chat) via the Anthropic API. From
+      # Which LLM Jarvis talks to: "anthropic" or "groq". Groq has a free
+      # tier, keeping this a ₹0-mandatory-cost deployment — set as a plain
+      # value (not a secret) since it's a config choice, not a credential.
+      - key: LLM_PROVIDER
+        value: groq
+      # Powers Jarvis when LLM_PROVIDER=groq (the default). Free tier —
+      # from console.groq.com -> API Keys.
+      - key: GROQ_API_KEY
+        sync: false
+      # Powers Jarvis when LLM_PROVIDER=anthropic. From
       # console.anthropic.com -> API Keys. The rest of the app works fine
-      # without this set — only /api/jarvis/* returns a 503 until it is.
+      # with neither of these two set — only /api/jarvis/* returns a 503
+      # until whichever provider is selected has its key configured.
       - key: ANTHROPIC_API_KEY
         sync: false
       # Cookie security depends on this — enables `secure`, required for a

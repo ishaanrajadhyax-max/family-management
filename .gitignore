@@ -31,3 +31,10 @@ dist-ssr
 *.sln
 *.sw?
 .neon
+
+# Notebook exports (personal) — must never sit in the repo.
+/jarvis-notebook-export/
+/notebook-export/
+
+# Jarvis TTS usage counters (counts and dates only) — local runtime state.
+/server/.tts-usage.json

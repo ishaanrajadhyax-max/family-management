@@ -7,33 +7,34 @@ import './appShell.css'
 
 type Section = 'jarvis' | 'family'
 
-// Jarvis is the new primary interface; Family Management (the original
-// health tracker) stays fully intact underneath it, one tab over — never
-// retired, hidden, or broken by this. Nothing about DadApp itself changes
-// here, it's mounted exactly as it always was.
+// Jarvis is the primary interface and fills the screen; its header has a FAMILY
+// entry that switches to Family Management (the original health tracker),
+// which stays fully intact and is mounted exactly as it always was, under a
+// slim bar with the way back. Nothing about DadApp itself changes here.
 function MainShell() {
   const [section, setSection] = useState<Section>('jarvis')
+
+  if (section === 'jarvis') {
+    return (
+      <div className="app-shell app-shell-jarvis">
+        <JarvisApp onOpenFamily={() => setSection('family')} />
+      </div>
+    )
+  }
 
   return (
     <div className="app-shell">
       <nav className="app-shell-tabs" aria-label="App section">
-        <button
-          type="button"
-          className={section === 'jarvis' ? 'app-shell-tab active' : 'app-shell-tab'}
-          onClick={() => setSection('jarvis')}
-        >
-          Jarvis
+        <button type="button" className="app-shell-tab" onClick={() => setSection('jarvis')}>
+          <span className="app-shell-mark" aria-hidden="true" />
+          JARVIS
         </button>
-        <button
-          type="button"
-          className={section === 'family' ? 'app-shell-tab active' : 'app-shell-tab'}
-          onClick={() => setSection('family')}
-        >
-          Family Management
+        <button type="button" className="app-shell-tab active" aria-current="page">
+          FAMILY MANAGEMENT
         </button>
       </nav>
       <div className="app-shell-body">
-        {section === 'jarvis' ? <JarvisApp /> : <DadApp />}
+        <DadApp />
       </div>
     </div>
   )

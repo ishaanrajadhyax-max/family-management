@@ -74,3 +74,5 @@ export function useVoiceCapture() {
 
   return { isSupported, isListening, error, start, stop }
 }
+
+export type VoiceCapture = ReturnType<typeof useVoiceCapture>

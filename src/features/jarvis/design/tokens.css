@@ -1,0 +1,203 @@
+/* Jarvis design tokens: the single source for colour, type, spacing, borders,
+   glow and motion. Colour is semantic: cyan = normal/active, blue = system and
+   information, green = ready/approved, amber = attention/pending, red =
+   error/destructive. Glow appears only to indicate state. */
+
+:root {
+  /* Surfaces */
+  --j-bg: #02060b;
+  --j-bg-2: #050d16;
+  --j-panel: rgba(6, 16, 26, 0.72);
+  --j-panel-solid: #06101a;
+  --j-raised: rgba(14, 32, 48, 0.6);
+
+  /* Lines */
+  --j-line: rgba(34, 211, 238, 0.2);
+  --j-line-soft: rgba(120, 190, 220, 0.1);
+  --j-line-strong: rgba(34, 211, 238, 0.55);
+
+  /* Colour */
+  --j-cyan: #22d3ee;
+  --j-cyan-bright: #7ee8fb;
+  --j-blue: #3b82f6;
+  --j-blue-bright: #60a5fa;
+  --j-green: #34d399;
+  --j-amber: #fbbf24;
+  --j-red: #f87171;
+
+  /* Text */
+  --j-text: #9db4c8;
+  --j-text-h: #e8f6ff;
+  --j-muted: #5f7a90;
+
+  /* Type */
+  --j-font-display: 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+  --j-font-body: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --j-font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  /* Shape and spacing */
+  --j-radius: 3px;
+  --j-radius-lg: 6px;
+  --j-gap: 12px;
+
+  /* Glow (used only for state) */
+  --j-glow: 0 0 14px rgba(34, 211, 238, 0.28);
+  --j-glow-strong: 0 0 22px rgba(34, 211, 238, 0.45);
+
+  /* Motion: one curve and three speeds, everywhere */
+  --j-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --j-dur-fast: 120ms;
+  --j-dur: 220ms;
+  --j-dur-slow: 420ms;
+}
+
+@keyframes j-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes j-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes j-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes j-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes j-pop-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+@keyframes j-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes j-slide-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes j-slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+}
+
+@keyframes j-slide-out-up {
+  to {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+}
+
+@keyframes j-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+@keyframes j-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+
+@keyframes j-toast-out {
+  to {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+
+@keyframes j-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.985);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.015);
+  }
+}
+
+@keyframes j-bar-pulse {
+  0%,
+  100% {
+    transform: scaleY(0.16);
+  }
+  50% {
+    transform: scaleY(calc(0.28 + var(--k) * 0.3));
+  }
+}
+
+@keyframes j-attention {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.96);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes j-error-pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes j-scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes j-send-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(34, 211, 238, 0);
+  }
+}
+
+@keyframes j-listen-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 22px rgba(34, 211, 238, 0);
+  }
+}

@@ -36,6 +36,7 @@ import bloodPressureRouter from './routes/bloodPressure.js'
 import walkRunRouter from './routes/walkRun.js'
 import gymRouter from './routes/gym.js'
 import jarvisRouter from './routes/jarvis.js'
+import jarvisSpeechRouter from './routes/jarvisSpeech.js'
 import { requireAuth, requireAdmin } from './middleware/requireAuth.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -43,7 +44,20 @@ const isProduction = process.env.NODE_ENV === 'production'
 
 const app = express()
 
-app.use(helmet())
+// Helmet's default Content-Security-Policy, plus ONE addition: media-src
+// 'self' blob:. Without it media falls back to default-src 'self', which
+// blocks the blob: URL the browser plays Jarvis's spoken replies from (the
+// Unreal Speech MP3 is fetched into memory and played from a blob: URL), so
+// the voice silently fell back to the browser's built-in one. Every other
+// directive stays at Helmet's default.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: { 'media-src': ["'self'", 'blob:'] },
+    },
+  }),
+)
 // CORS is only needed for a genuinely separate origin — the local Vite dev
 // server (a different port = a different origin) always gets it; in
 // production it's off by default now that the frontend is same-origin,
@@ -94,6 +108,7 @@ app.use('/api/blood-sugar-readings', bloodSugarRouter)
 app.use('/api/blood-pressure-readings', bloodPressureRouter)
 app.use('/api/walk-run-activities', walkRunRouter)
 app.use('/api/gym-activities', gymRouter)
+app.use('/api/jarvis/speech', jarvisSpeechRouter)
 app.use('/api/jarvis', jarvisRouter)
 
 // Centralized error handler — keeps route handlers free of repeated

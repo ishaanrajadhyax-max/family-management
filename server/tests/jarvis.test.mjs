@@ -3,11 +3,11 @@
 // test_-prefixed fixtures cleaned up in `after`, requires a local dev
 // server on http://localhost:4000 pointed at the LOCAL database.
 //
-// These deliberately don't require ANTHROPIC_API_KEY to be set — the
-// "send a message with no key configured" test is exactly the graceful
-// 503 path that must keep working whether or not a key is present, and
-// everything else here (modes, conversation CRUD, ownership scoping) is
-// independent of the LLM call itself.
+// These deliberately don't require any LLM provider's API key to be set —
+// the "send a message with no key configured" test is exactly the
+// graceful 503 path that must keep working whichever provider is active
+// (or none is configured), and everything else here (modes, conversation
+// CRUD, ownership scoping) is independent of the LLM call itself.
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { pool } from '../db.js'
@@ -164,7 +164,7 @@ test('sending an empty message is rejected', async () => {
   assert.match(body.error, /content is required/)
 })
 
-test('sending a message without ANTHROPIC_API_KEY configured fails gracefully with 503, not a crash', async () => {
+test('sending a message with no LLM provider configured fails gracefully with 503, not a crash', async () => {
   const created = await api('/api/jarvis/conversations', {
     method: 'POST',
     cookie: dadCookie,
@@ -176,14 +176,17 @@ test('sending a message without ANTHROPIC_API_KEY configured fails gracefully wi
     body: { content: 'hello' },
   })
   // This test intentionally passes in both states: if a real key is
-  // configured (e.g. in CI later), the message should actually succeed
-  // (201); if not, it must degrade to a clear 503, never a bare 500.
+  // configured for the active provider (e.g. in CI later), the message
+  // should actually succeed (201); if not, it must degrade to a clear
+  // 503, never a bare 500 — and the 503 message must not name a specific
+  // provider, since whichever one is active could be either.
   assert.ok(
     status === 503 || status === 201,
     `expected 503 (no key) or 201 (key configured), got ${status}: ${JSON.stringify(body)}`,
   )
   if (status === 503) {
-    assert.match(body.error, /ANTHROPIC_API_KEY/)
+    assert.match(body.error, /not configured/)
+    assert.doesNotMatch(body.error, /ANTHROPIC_API_KEY|GROQ_API_KEY/)
   }
 })
 
