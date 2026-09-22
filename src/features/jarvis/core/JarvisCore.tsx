@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useCoreState } from '../hooks/useCoreState'
 import { useReducedMotion } from '../hooks/useMotionPreference'
+import { useInteractionState } from '../hooks/useInteractionState'
+import { useCoreInteraction } from '../hooks/useCoreInteraction'
 import { readCoreLevel } from '../logic/coreStore.ts'
 import { CORE_LABEL } from '../logic/coreState.ts'
+import CoreHoop from './CoreHoop'
 
 const C = 200 // centre of the 400x400 drawing
 
@@ -36,14 +39,23 @@ const BARS = Array.from({ length: 72 }, (_, i) => ({
 }))
 const MARKERS = [0, 90, 180, 270]
 
+export interface JarvisCoreProps {
+  // Enables the Core Interaction Engine (tap + basketball). Off by default —
+  // only the main-stage Core (not the boot-screen one) should pass true. See
+  // hooks/useCoreInteraction.ts for the full engine.
+  interactive?: boolean
+}
+
 // The Jarvis Core. It draws whatever the core store says — idle, listening,
 // thinking, speaking, error, attention — and, while listening or speaking,
 // follows the real audio level through one CSS variable (--lvl) updated at most
 // once per frame, without re-rendering React.
-export default function JarvisCore() {
+export default function JarvisCore({ interactive = false }: JarvisCoreProps) {
   const { state, detail } = useCoreState()
   const reduced = useReducedMotion()
   const rootRef = useRef<HTMLDivElement>(null)
+  const interaction = useInteractionState()
+  const { triggerFallbackShot } = useCoreInteraction(rootRef, interactive)
 
   useEffect(() => {
     const el = rootRef.current
@@ -69,78 +81,109 @@ export default function JarvisCore() {
     return () => cancelAnimationFrame(raf)
   }, [state, reduced])
 
+  const responseText = interaction.phase === 'tap-react' ? interaction.tapResponse : interaction.phase === 'outcome' ? interaction.shotResponse : undefined
+
+  const interactiveHint = interactive ? ' — tap, or drag and release to shoot a basket; press space to shoot' : ''
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (!interactive) return
+    if (e.key !== ' ' && e.key !== 'Enter' && e.key !== 'Spacebar') return
+    e.preventDefault()
+    triggerFallbackShot()
+  }
+
   return (
-    <div ref={rootRef} className="j-core" data-state={state} role="img" aria-label={`Jarvis core: ${CORE_LABEL[state].toLowerCase()}${detail ? `, ${detail.toLowerCase()}` : ''}`}>
-      <svg viewBox="0 0 400 400" className="j-core-svg" aria-hidden="true" focusable="false">
-        <defs>
-          <radialGradient id="j-core-glow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="var(--core)" stopOpacity="0.55" />
-            <stop offset="55%" stopColor="var(--core)" stopOpacity="0.16" />
-            <stop offset="100%" stopColor="var(--core)" stopOpacity="0" />
-          </radialGradient>
-          <radialGradient id="j-core-disc" cx="50%" cy="42%" r="60%">
-            <stop offset="0%" stopColor="var(--core)" stopOpacity="0.32" />
-            <stop offset="70%" stopColor="#031019" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#020a10" stopOpacity="0.95" />
-          </radialGradient>
-        </defs>
+    <div className="j-core-wrap">
+      {interactive && <CoreHoop dragDelta={interaction.phase === 'aiming' ? interaction.dragDelta : undefined} />}
+      <div
+        ref={rootRef}
+        className="j-core"
+        data-state={state}
+        data-interaction={interactive ? interaction.phase : undefined}
+        data-outcome={interaction.shotOutcome}
+        role="img"
+        tabIndex={interactive ? 0 : undefined}
+        onKeyDown={interactive ? onKeyDown : undefined}
+        draggable={interactive ? false : undefined}
+        aria-label={`Jarvis core: ${CORE_LABEL[state].toLowerCase()}${detail ? `, ${detail.toLowerCase()}` : ''}${interactiveHint}`}
+      >
+        <svg viewBox="0 0 400 400" className="j-core-svg" aria-hidden="true" focusable="false">
+          <defs>
+            <radialGradient id="j-core-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="var(--core)" stopOpacity="0.55" />
+              <stop offset="55%" stopColor="var(--core)" stopOpacity="0.16" />
+              <stop offset="100%" stopColor="var(--core)" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="j-core-disc" cx="50%" cy="42%" r="60%">
+              <stop offset="0%" stopColor="var(--core)" stopOpacity="0.32" />
+              <stop offset="70%" stopColor="#031019" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#020a10" stopOpacity="0.95" />
+            </radialGradient>
+          </defs>
 
-        <circle className="j-core-halo" cx={C} cy={C} r="196" fill="url(#j-core-glow)" />
+          <circle className="j-core-halo" cx={C} cy={C} r="196" fill="url(#j-core-glow)" />
 
-        <g className="j-core-ticks">
-          {TICKS.map((t, i) => (
-            <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} className={t.long ? 'long' : undefined} />
-          ))}
-        </g>
+          <g className="j-core-ticks">
+            {TICKS.map((t, i) => (
+              <line key={i} x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2} className={t.long ? 'long' : undefined} />
+            ))}
+          </g>
 
-        <circle className="j-core-dash" cx={C} cy={C} r="176" />
+          <circle className="j-core-dash" cx={C} cy={C} r="176" />
 
-        <g className="j-core-arcs">
-          {ARCS.map((d, i) => (
-            <path key={i} d={d} />
-          ))}
-        </g>
+          <g className="j-core-arcs">
+            {ARCS.map((d, i) => (
+              <path key={i} d={d} />
+            ))}
+          </g>
 
-        <circle className="j-core-thin" cx={C} cy={C} r="150" />
-        {MARKERS.map((deg) => {
-          const [x, y] = polar(150, deg)
-          return <rect key={deg} className="j-core-marker" x={x - 3} y={y - 3} width="6" height="6" transform={`rotate(45 ${x} ${y})`} />
-        })}
+          <circle className="j-core-thin" cx={C} cy={C} r="150" />
+          {MARKERS.map((deg) => {
+            const [x, y] = polar(150, deg)
+            return <rect key={deg} className="j-core-marker" x={x - 3} y={y - 3} width="6" height="6" transform={`rotate(45 ${x} ${y})`} />
+          })}
 
-        <path className="j-core-scan" d={SCAN_ARC} />
+          <path className="j-core-scan" d={SCAN_ARC} />
 
-        <g className="j-core-bars">
-          {BARS.map((b, i) => (
-            <g key={i} transform={`rotate(${b.deg} ${C} ${C})`}>
-              <rect
-                className="j-core-bar"
-                x={C - 1.5}
-                y={C - 122 - 28}
-                width="3"
-                height="28"
-                rx="1.5"
-                style={{ '--k': b.k, '--d': `${b.delay}ms` } as React.CSSProperties}
-              />
-            </g>
-          ))}
-        </g>
+          <g className="j-core-bars">
+            {BARS.map((b, i) => (
+              <g key={i} transform={`rotate(${b.deg} ${C} ${C})`}>
+                <rect
+                  className="j-core-bar"
+                  x={C - 1.5}
+                  y={C - 122 - 28}
+                  width="3"
+                  height="28"
+                  rx="1.5"
+                  style={{ '--k': b.k, '--d': `${b.delay}ms` } as React.CSSProperties}
+                />
+              </g>
+            ))}
+          </g>
 
-        <circle className="j-core-disc" cx={C} cy={C} r="108" fill="url(#j-core-disc)" />
-        <circle className="j-core-inner" cx={C} cy={C} r="100" />
-        <circle className="j-core-attn" cx={C} cy={C} r="112" />
+          <circle className="j-core-disc" cx={C} cy={C} r="108" fill="url(#j-core-disc)" />
+          <circle className="j-core-inner" cx={C} cy={C} r="100" />
+          <circle className="j-core-attn" cx={C} cy={C} r="112" />
+          {interactive && <circle className="j-core-ripple" cx={C} cy={C} r="100" />}
 
-        <text className="j-core-word" x={C} y={C - 6} textAnchor="middle">
-          JARVIS
-        </text>
-        <text className="j-core-state" x={C} y={C + 18} textAnchor="middle">
-          CORE // {CORE_LABEL[state]}
-        </text>
-        {detail && (
-          <text className="j-core-detail" x={C} y={C + 36} textAnchor="middle">
-            {detail}
+          <text className="j-core-word" x={C} y={C - 6} textAnchor="middle">
+            JARVIS
           </text>
-        )}
-      </svg>
+          <text className="j-core-state" x={C} y={C + 18} textAnchor="middle">
+            CORE // {CORE_LABEL[state]}
+          </text>
+          {detail && (
+            <text className="j-core-detail" x={C} y={C + 36} textAnchor="middle">
+              {detail}
+            </text>
+          )}
+          {responseText && (
+            <text className="j-core-response" x={C} y={C + 54} textAnchor="middle">
+              {responseText}
+            </text>
+          )}
+        </svg>
+      </div>
     </div>
   )
 }

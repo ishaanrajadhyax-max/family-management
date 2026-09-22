@@ -241,7 +241,7 @@ function JarvisInner({ onOpenFamily }: JarvisAppProps) {
 
         <section className="j-center" data-compact={hasMessages && viewMode === 'chat' ? 'true' : 'false'}>
           <div className="j-stage">
-            <JarvisCore />
+            <JarvisCore interactive />
           </div>
           <HudPanel label="CONVERSATION" meta={modeLabel.toUpperCase()} className="j-console">
             <ConversationStream

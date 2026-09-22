@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { pool } from '../db.js'
-import { DEFAULT_AREA, isValidArea, listAreas, getToolsForArea } from '../jarvis/areas.js'
+import { DEFAULT_AREA, isValidArea, listAreas, getToolsForArea, getProviderConfig } from '../jarvis/areas.js'
 import { getJarvisReply, isJarvisConfigured, getProviderInfo } from '../jarvis/llmProvider.js'
 import { buildPrompt } from '../jarvis/promptBuilder.js'
 import { selectHistory } from '../jarvis/historyWindow.js'
@@ -187,11 +187,17 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
       memoryFacts: memoryResult.rows.map((r) => r.content).reverse(),
     })
 
+    // Provider-specific request overrides for this area (currently: News's
+    // Groq browser_search tool and the model it runs on). Empty for every
+    // other area/provider combination, so this is always safe to pass.
+    const providerConfig = getProviderConfig(conversation.mode, getProviderInfo().provider)
+
     const reply = await getJarvisReply({
       systemPrompt: prompt.systemPrompt,
       history: history.messages,
       tools: getToolsForArea(conversation.mode),
       familyMemberId: req.user.id,
+      providerConfig,
     })
 
     const assistantMessageResult = await pool.query(
@@ -202,10 +208,15 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
     )
 
     // Counts only — never any prompt/Notebook/memory/conversation text.
+    // model comes from the reply itself, not the provider's static
+    // default: News can run on a different model than General/Style (see
+    // providerConfig above), so what was actually used must be recorded,
+    // not assumed.
     await recordUsage({
       ownerId: req.user.id,
       conversationId: req.params.id,
-      ...getProviderInfo(),
+      provider: getProviderInfo().provider,
+      model: reply.model ?? getProviderInfo().model,
       area: conversation.mode,
       estimatedPromptTokens: prompt.estimatedTokens + history.estimatedTokens,
       usage: reply.usage,

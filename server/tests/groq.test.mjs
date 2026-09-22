@@ -8,7 +8,7 @@ import { test, before, after, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { pool } from '../db.js'
 import * as groq from '../jarvis/providers/groq.js'
-import { getToolsForArea } from '../jarvis/areas.js'
+import { getToolsForArea, getProviderConfig } from '../jarvis/areas.js'
 
 const DEFAULT_MODEL = 'openai/gpt-oss-120b'
 const RUN_ID = Date.now().toString(36)
@@ -186,12 +186,29 @@ test('throws a clear error when GROQ_API_KEY is missing', async () => {
   assert.equal(calls.length, 0)
 })
 
-test('surfaces Groq API errors (e.g. rate limit) with the API-provided message', async () => {
+test('surfaces Groq API errors (non-429) immediately, with the API-provided message', async () => {
+  queue.push({ ok: false, status: 500, json: { error: { message: 'Something broke' } } })
+  await assert.rejects(() => run(), /Something broke/)
+  assert.equal(calls.length, 1, 'no retry for a non-429 error')
+})
+
+test('429: a transient rate limit is retried and recovers, without failing the request', async () => {
   queue.push({ ok: false, status: 429, json: { error: { message: 'Rate limit reached' } } })
-  await assert.rejects(
-    () => run(),
-    /Rate limit reached/,
-  )
+  queue.push(textResponse('Recovered after retry'))
+
+  const reply = await run()
+
+  assert.equal(reply.text, 'Recovered after retry')
+  assert.equal(calls.length, 2, 'one failed attempt, one retry that succeeded')
+})
+
+test('429: a persistent rate limit is retried a bounded number of times, then surfaces the API message', async () => {
+  queue.push({ ok: false, status: 429, json: { error: { message: 'Rate limit reached' } } })
+  queue.push({ ok: false, status: 429, json: { error: { message: 'Rate limit reached' } } })
+  queue.push({ ok: false, status: 429, json: { error: { message: 'Rate limit reached' } } })
+
+  await assert.rejects(() => run(), /Rate limit reached/)
+  assert.equal(calls.length, 3, 'the initial attempt plus exactly two retries, then it gives up')
 })
 
 test('tool call detection + JSON-string argument parsing: remember_fact reaches the database', async () => {
@@ -287,4 +304,185 @@ test('a model that keeps calling tools is capped at 3 rounds instead of looping 
 
   assert.equal(calls.length, 3)
   assert.match(reply.text, /trouble finishing/)
+})
+
+// ---------------------------------------------------------------------------
+// News web search (Groq's browser_search built-in tool). Response shapes
+// below match what Groq's real API actually returned during manual
+// verification (openai/gpt-oss-20b): a search-triggered reply comes back
+// with finish_reason 'stop' and an inline OpenAI-style citation marker —
+// browser_search itself never appears in tool_calls, because Groq resolves
+// it server-side before the response reaches us.
+const NEWS_TOOLS = getToolsForArea('news')
+const NEWS_PROVIDER_CONFIG = getProviderConfig('news', 'groq')
+const runNews = (overrides = {}) => run({ tools: NEWS_TOOLS, providerConfig: NEWS_PROVIDER_CONFIG, ...overrides })
+
+function searchedResponse(content) {
+  return {
+    json: {
+      usage: { prompt_tokens: 7162, completion_tokens: 370, total_tokens: 7532 },
+      choices: [
+        {
+          finish_reason: 'stop',
+          message: {
+            role: 'assistant',
+            content,
+            executed_tools: [{ name: 'browser.search', type: 'browser_search', arguments: '{"query":"test"}', output: 'L0: search results...' }],
+          },
+        },
+      ],
+    },
+  }
+}
+
+test('News: offers browser_search (merged with remember_fact) and runs on gpt-oss-20b, not the default model', async () => {
+  queue.push(textResponse('no search needed for this one'))
+
+  await runNews()
+
+  const { body } = calls[0]
+  assert.equal(body.model, 'openai/gpt-oss-20b')
+  assert.notEqual(body.model, process.env.GROQ_MODEL || DEFAULT_MODEL)
+  const types = body.tools.map((t) => t.type)
+  assert.ok(types.includes('browser_search'), 'browser_search is offered')
+  assert.ok(types.includes('function'), 'our function tools are still offered')
+  assert.equal(body.tools.find((t) => t.type === 'function').function.name, 'remember_fact')
+})
+
+test('News, a question that needs current information: the model searches, and the reply is grounded and returned normally', async () => {
+  queue.push(searchedResponse('The latest stable Node.js release is v26.9.0【2†L8-L11】.'))
+
+  const reply = await runNews()
+
+  assert.equal(calls.length, 1, 'browser_search resolved within the one request — no extra round trip needed')
+  assert.equal(reply.text, 'The latest stable Node.js release is v26.9.0.')
+  assert.equal(reply.model, 'openai/gpt-oss-20b')
+  assert.deepEqual(reply.usage, { promptTokens: 7162, completionTokens: 370, totalTokens: 7532 })
+})
+
+test('News, a question that needs no current information: the model can decline to search and the reply passes through unchanged', async () => {
+  queue.push(textResponse('12 times 8 is 96.'))
+
+  const reply = await runNews()
+
+  assert.equal(calls.length, 1)
+  assert.equal(reply.text, '12 times 8 is 96.')
+  // browser_search was OFFERED (previous test) but using it is the model's
+  // decision, not something this code forces — a plain reply with no
+  // executed_tools/tool_calls is handled exactly like any other area's.
+})
+
+test('News: browser_search and remember_fact together in one turn — search resolves inline, remember_fact still goes through our tool loop', async () => {
+  const marker = `News combined ${RUN_ID}`
+  queue.push({
+    json: {
+      usage: { prompt_tokens: 4191, completion_tokens: 319, total_tokens: 4510 },
+      choices: [
+        {
+          finish_reason: 'tool_calls',
+          message: {
+            role: 'assistant',
+            content: '',
+            executed_tools: [{ name: 'browser.search', type: 'browser_search', arguments: '{"query":"node version"}', output: 'L0: ...' }],
+            tool_calls: [{ id: 'fc_1', type: 'function', function: { name: 'remember_fact', arguments: JSON.stringify({ fact: marker }) } }],
+          },
+        },
+      ],
+    },
+  })
+  queue.push(searchedResponse('Latest Node.js is v26.9.0【0†L1-L2】, and I\'ll remember that.'))
+
+  const reply = await runNews()
+
+  assert.equal(calls.length, 2, 'round 1: search resolves + remember_fact requested; round 2: final text')
+  // browser_search never appears in tool_calls — only remember_fact does,
+  // and only it gets pushed through executeTool/a tool-role message.
+  assert.equal(calls[0].body.messages.length, 2, 'system + the one user turn, before any tool round-trip')
+  const followUp = calls[1].body.messages
+  assert.equal(followUp[2].role, 'assistant')
+  assert.equal(followUp[2].tool_calls.length, 1)
+  assert.equal(followUp[2].tool_calls[0].function.name, 'remember_fact')
+  assert.deepEqual(followUp[3], { role: 'tool', tool_call_id: 'fc_1', content: 'Saved.' })
+  // Both rounds used the News model.
+  assert.equal(calls[0].body.model, 'openai/gpt-oss-20b')
+  assert.equal(calls[1].body.model, 'openai/gpt-oss-20b')
+
+  assert.equal(reply.text, "Latest Node.js is v26.9.0, and I'll remember that.")
+  assert.deepEqual(reply.usage, { promptTokens: 4191 + 7162, completionTokens: 319 + 370, totalTokens: 4510 + 7532 })
+
+  const rows = await pool.query('SELECT content FROM jarvis_memory WHERE family_member_id = $1 AND content = $2', [fixtureId, marker])
+  assert.equal(rows.rowCount, 1)
+})
+
+test('General and Style also offer browser_search now, but on the DEFAULT model (unlike News, which stays on gpt-oss-20b)', async () => {
+  for (const mode of ['general', 'style']) {
+    calls.length = 0
+    queue.push(textResponse('ordinary reply'))
+    const reply = await run({ tools: getToolsForArea(mode), providerConfig: getProviderConfig(mode, 'groq') })
+    assert.equal(calls[0].body.model, process.env.GROQ_MODEL || DEFAULT_MODEL, `${mode} stays on the default model`)
+    const types = calls[0].body.tools.map((t) => t.type)
+    assert.ok(types.includes('browser_search'), `${mode} must offer browser_search`)
+    assert.ok(types.includes('function') && calls[0].body.tools.find((t) => t.type === 'function').function.name === 'remember_fact', `${mode} still offers remember_fact`)
+    assert.equal(reply.model, process.env.GROQ_MODEL || DEFAULT_MODEL, mode)
+  }
+})
+
+test('General: an ordinary, timeless question is answered without forcing a search (offering the tool is not the same as using it)', async () => {
+  queue.push(textResponse('12 times 8 is 96.'))
+  const reply = await run({ tools: getToolsForArea('general'), providerConfig: getProviderConfig('general', 'groq') })
+  assert.equal(calls.length, 1)
+  assert.equal(reply.text, '12 times 8 is 96.')
+})
+
+test('General: a question needing current information can search, exactly like News, and the reply is grounded and cleaned', async () => {
+  queue.push(searchedResponse('The latest stable Node.js release is v26.9.0【2†L8-L11】.'))
+  const reply = await run({ tools: getToolsForArea('general'), providerConfig: getProviderConfig('general', 'groq') })
+  assert.equal(calls.length, 1)
+  assert.equal(reply.text, 'The latest stable Node.js release is v26.9.0.')
+  assert.equal(reply.model, process.env.GROQ_MODEL || DEFAULT_MODEL, 'General search still runs on the default model, not gpt-oss-20b')
+})
+
+test('Style: browser_search and remember_fact together — same combined shape already verified for News', async () => {
+  const marker = `Style combined ${RUN_ID}`
+  queue.push({
+    json: {
+      usage: { prompt_tokens: 4191, completion_tokens: 319, total_tokens: 4510 },
+      choices: [
+        {
+          finish_reason: 'tool_calls',
+          message: {
+            role: 'assistant',
+            content: '',
+            executed_tools: [{ name: 'browser.search', type: 'browser_search', arguments: '{"query":"men\'s linen shirt"}', output: 'L0: ...' }],
+            tool_calls: [{ id: 'fc_1', type: 'function', function: { name: 'remember_fact', arguments: JSON.stringify({ fact: marker }) } }],
+          },
+        },
+      ],
+    },
+  })
+  queue.push(searchedResponse("Found a relaxed-fit linen shirt option【0†L1-L2】, and I'll remember that."))
+
+  const reply = await run({ tools: getToolsForArea('style'), providerConfig: getProviderConfig('style', 'groq') })
+
+  assert.equal(calls.length, 2)
+  assert.equal(calls[0].body.model, process.env.GROQ_MODEL || DEFAULT_MODEL)
+  assert.equal(reply.text, "Found a relaxed-fit linen shirt option, and I'll remember that.")
+
+  const rows = await pool.query('SELECT content FROM jarvis_memory WHERE family_member_id = $1 AND content = $2', [fixtureId, marker])
+  assert.equal(rows.rowCount, 1)
+})
+
+// ---------------------------------------------------------------------------
+// Citation cleanup: Groq/OpenAI-style inline bracket markers must never
+// reach the user as raw internal syntax.
+test('cleanCitations: strips 【N†...】 markers and tidies the resulting whitespace/punctuation', () => {
+  assert.equal(groq.cleanCitations('v26.9.0【2†L8-L11】.'), 'v26.9.0.')
+  assert.equal(groq.cleanCitations('Node.js (v24.21.0)【2†L8-L11】 is the LTS.'), 'Node.js (v24.21.0) is the LTS.')
+  assert.equal(
+    groq.cleanCitations('First fact【0†a】, second fact【1†b】, done.'),
+    'First fact, second fact, done.',
+  )
+  assert.equal(groq.cleanCitations('No markers here at all.'), 'No markers here at all.')
+  assert.equal(groq.cleanCitations(''), '')
+  assert.equal(groq.cleanCitations('  padded  text  '), 'padded text')
 })

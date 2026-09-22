@@ -508,6 +508,160 @@
   animation: j-attention 1.9s ease-out infinite;
 }
 
+/* Core Interaction Engine (tap + basketball) -------------------------------
+   `.j-core-wrap` replaces `.j-core` as the element that fills the stage, so
+   the hoop (fixed) and the Core itself (which flies during a shot) can be
+   independent siblings sharing the same box. Everything below is additive:
+   none of it changes how the Core looks or behaves when `interactive` is
+   false — `data-interaction` is only ever set on the interactive instance. */
+
+.j-core-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+.j-core[data-interaction] {
+  cursor: grab;
+  touch-action: none;
+  transform: translate(var(--ix, 0px), var(--iy, 0px));
+  /* Without this, a slow/small drag lets the browser's own native
+     image/SVG drag-and-drop win the race against our 12px tap-vs-drag
+     threshold, firing a pointercancel and aborting the gesture before our
+     own logic ever calls preventDefault(). Disabling native drag entirely
+     makes our own pointer handling the only thing that can ever start a
+     drag on the Core. */
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.j-core[data-interaction]:focus-visible {
+  outline: 1px solid var(--j-line-strong);
+  outline-offset: 6px;
+}
+
+.j-core[data-interaction='grabbed'],
+.j-core[data-interaction='aiming'] {
+  cursor: grabbing;
+  filter: drop-shadow(0 0 16px var(--core));
+}
+
+.j-core[data-interaction='shooting'] {
+  filter: drop-shadow(0 0 24px var(--core));
+}
+
+/* Outcome tint: a brief, subtle colour cue layered on top of the Core's own
+   state colour — green for a make, amber for close, red for a clear miss. */
+.j-core[data-interaction='outcome'][data-outcome='made'],
+.j-core[data-interaction='returning'][data-outcome='made'] {
+  filter: drop-shadow(0 0 20px var(--j-green));
+}
+
+.j-core[data-interaction='outcome'][data-outcome='close'],
+.j-core[data-interaction='returning'][data-outcome='close'] {
+  filter: drop-shadow(0 0 18px var(--j-amber));
+}
+
+.j-core[data-interaction='outcome'][data-outcome='miss'],
+.j-core[data-interaction='outcome'][data-outcome='very_bad_miss'],
+.j-core[data-interaction='returning'][data-outcome='miss'],
+.j-core[data-interaction='returning'][data-outcome='very_bad_miss'] {
+  filter: drop-shadow(0 0 16px var(--j-red));
+}
+
+/* Tap: a quick squash-and-settle, scaled by how hard the tap read. */
+.j-core[data-interaction='tap-react'] {
+  animation: j-core-tap-react 0.42s var(--j-ease) 1;
+}
+
+@keyframes j-core-tap-react {
+  0% {
+    transform: scale(1, 1);
+  }
+  28% {
+    transform: scale(calc(1 - 0.09 * var(--tap-intensity, 0.5)), calc(1 + 0.06 * var(--tap-intensity, 0.5)));
+  }
+  60% {
+    transform: scale(calc(1 + 0.03 * var(--tap-intensity, 0.5)), calc(1 - 0.02 * var(--tap-intensity, 0.5)));
+  }
+  100% {
+    transform: scale(1, 1);
+  }
+}
+
+.j-core-ripple {
+  fill: none;
+  stroke: var(--core);
+  stroke-width: 2;
+  opacity: 0;
+}
+
+.j-core[data-interaction='tap-react'] .j-core-ripple {
+  animation: j-core-ripple 0.42s var(--j-ease) 1;
+}
+
+@keyframes j-core-ripple {
+  0% {
+    transform: scale(0.6);
+    opacity: calc(0.5 * var(--tap-intensity, 0.5));
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+.j-core-response {
+  font-family: var(--j-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  fill: var(--j-cyan-bright);
+  opacity: 0;
+}
+
+.j-core[data-interaction='tap-react'] .j-core-response,
+.j-core[data-interaction='outcome'] .j-core-response {
+  opacity: 1;
+  animation: j-fade-in var(--j-dur) var(--j-ease) 1;
+}
+
+/* The hoop: a technical reticle, not a literal basketball hoop — fixed in
+   place while the Core itself moves during a shot. */
+.j-hoop-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.j-hoop-rim,
+.j-hoop-tick {
+  fill: none;
+  stroke: var(--j-cyan);
+  stroke-width: 0.5;
+}
+
+.j-hoop-backboard {
+  stroke: var(--j-cyan);
+  stroke-width: 0.4;
+  opacity: 0.6;
+}
+
+.j-hoop-launch {
+  fill: var(--j-cyan);
+  opacity: 0.5;
+}
+
+.j-hoop-trajectory {
+  fill: none;
+  stroke: var(--j-cyan-bright);
+  stroke-width: 0.5;
+  stroke-dasharray: 1.4 1.4;
+}
+
 /* Console ------------------------------------------------------------------ */
 
 .j-stream {

@@ -4,6 +4,16 @@ import { setMotionPreference, useMotionPreference } from '../hooks/useMotionPref
 import type { MotionPreference } from '../hooks/useMotionPreference'
 import type { VoiceEngine } from '../useSpeechOutput'
 import { ENGINE_LABEL } from '../logic/labels.ts'
+import {
+  getVoicePlaybackSettings,
+  setVoiceSpeed,
+  setVoiceVolume,
+  subscribeVoicePlaybackSettings,
+  SPEED_MIN,
+  SPEED_MAX,
+  VOLUME_MIN,
+  VOLUME_MAX,
+} from '../logic/voiceSettings.ts'
 
 interface SettingsPanelProps {
   speakEnabled: boolean
@@ -34,6 +44,7 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (nex
 // Minimal, real settings only. Every control here changes something that exists.
 export default function SettingsPanel({ speakEnabled, onToggleSpeak, speechSupported, micSupported, engine, userName, userRole, onSignOut }: SettingsPanelProps) {
   const sound = useSyncExternalStore(subscribeSoundSettings, getSoundSettings, getSoundSettings)
+  const voice = useSyncExternalStore(subscribeVoicePlaybackSettings, getVoicePlaybackSettings, getVoicePlaybackSettings)
   const motion = useMotionPreference()
 
   return (
@@ -90,6 +101,38 @@ export default function SettingsPanel({ speakEnabled, onToggleSpeak, speechSuppo
             <Switch checked={speakEnabled} label="Spoken replies" onChange={onToggleSpeak} />
           </div>
         )}
+        <div className="j-set-row">
+          <label htmlFor="voice-speed">
+            Speech speed
+            <small>{voice.speed.toFixed(2)}x — playback pace only; Will&apos;s voice stays the same.</small>
+          </label>
+          <input
+            id="voice-speed"
+            className="j-range"
+            type="range"
+            min={SPEED_MIN}
+            max={SPEED_MAX}
+            step={0.01}
+            value={voice.speed}
+            onChange={(e) => setVoiceSpeed(Number(e.target.value))}
+          />
+        </div>
+        <div className="j-set-row">
+          <label htmlFor="voice-volume">
+            Voice volume
+            <small>{Math.round(voice.volume)}% — separate from UI sound.</small>
+          </label>
+          <input
+            id="voice-volume"
+            className="j-range"
+            type="range"
+            min={VOLUME_MIN}
+            max={VOLUME_MAX}
+            step={1}
+            value={voice.volume}
+            onChange={(e) => setVoiceVolume(Number(e.target.value))}
+          />
+        </div>
         <dl className="j-set-info">
           <div>
             <dt>Voice engine</dt>

@@ -140,6 +140,57 @@ test('each area gets its own persona', async () => {
   }
 })
 
+test('News web search: routes/jarvis.js wires Groq browser_search + the gpt-oss-20b model through end to end, and it is recorded in jarvis_usage', async () => {
+  const id = await newConversation('news')
+  const res = await send(id, "what's happening right now")
+  assert.equal(res.status, 201)
+
+  assert.equal(groqCalls[0].model, 'openai/gpt-oss-20b')
+  const types = groqCalls[0].tools.map((t) => t.type)
+  assert.ok(types.includes('browser_search'), 'browser_search reached the actual Groq request')
+  assert.ok(types.includes('function') && groqCalls[0].tools.find((t) => t.type === 'function').function.name === 'remember_fact', 'remember_fact is still offered alongside it')
+
+  const usageRow = (await pool.query('SELECT provider, model, area FROM jarvis_usage WHERE conversation_id = $1', [id])).rows[0]
+  assert.equal(usageRow.provider, 'groq')
+  assert.equal(usageRow.model, 'openai/gpt-oss-20b', 'the model actually used is recorded, not the provider default')
+  assert.equal(usageRow.area, 'news')
+})
+
+test('General and Style also get browser_search end to end, but on the DEFAULT model (News alone stays on gpt-oss-20b)', async () => {
+  for (const mode of ['general', 'style']) {
+    groqCalls.length = 0
+    const id = await newConversation(mode)
+    const res = await send(id, 'hi')
+    assert.equal(res.status, 201)
+
+    assert.notEqual(groqCalls[0].model, 'openai/gpt-oss-20b', `${mode} must not switch to News's model`)
+    assert.ok(groqCalls[0].tools.some((t) => t.type === 'browser_search'), `${mode} must offer browser_search`)
+    assert.ok(groqCalls[0].tools.some((t) => t.type === 'function' && t.function.name === 'remember_fact'), `${mode} still offers remember_fact`)
+
+    const usageRow = (await pool.query('SELECT model FROM jarvis_usage WHERE conversation_id = $1', [id])).rows[0]
+    assert.notEqual(usageRow.model, 'openai/gpt-oss-20b', mode)
+  }
+})
+
+test('Style Notebook context still reaches Style prompts, and is still invisible to General/News, even though all three now share the search tool', async () => {
+  await pool.query(
+    `INSERT INTO jarvis_knowledge (owner_user_id, area, section, kind, entry_key, title, body, token_estimate, source_ref)
+     VALUES ($1, 'style', 'physical-profile', 'core', 'test-marker', 'Physical profile', 'STYLEMARKER synthetic test fact', 10, 'test')`,
+    [ownerId],
+  )
+  try {
+    for (const [mode, shouldSee] of [['style', true], ['general', false], ['news', false]]) {
+      groqCalls.length = 0
+      const id = await newConversation(mode)
+      await send(id, 'hi')
+      const sawIt = groqCalls[0].messages[0].content.includes('STYLEMARKER')
+      assert.equal(sawIt, shouldSee, mode)
+    }
+  } finally {
+    await pool.query(`DELETE FROM jarvis_knowledge WHERE owner_user_id = $1 AND entry_key = 'test-marker'`, [ownerId])
+  }
+})
+
 test('usage is recorded as counts only, with no conversation content', async () => {
   const id = await newConversation('general')
   await send(id, 'a message whose text must never be stored in usage')

@@ -65,24 +65,39 @@ export const AREAS = {
       'You are Jarvis, a warm, capable personal AI assistant. Be concise ' +
       'and direct, but personable — this is a private assistant for one ' +
       'person, not a customer support bot. Answer plainly; ask a brief ' +
-      'clarifying question only when you genuinely need one to help.',
+      'clarifying question only when you genuinely need one to help. ' +
+      'You can search the web when current or external information ' +
+      "would genuinely improve your answer — don't bother for timeless " +
+      "questions that don't need it.",
     // General sees only global rules/core — no area sections, so no
     // Style (or any other area's) data can reach it.
     sections: {},
     budget: {},
     tools: [],
     readableFrom: [],
+    // Groq's browser_search built-in tool, on the default model (no
+    // `model` override here — see providerConfig on News for why News
+    // itself uses a different one). See News's providerConfig comment for
+    // how this mechanism works; identical here, just enabled for General.
+    providerConfig: {
+      groq: {
+        tools: [{ type: 'browser_search' }],
+      },
+    },
   },
   news: {
     id: 'news',
     label: 'News',
     persona:
-      'You are Jarvis in News mode. You do not currently have live ' +
-      "internet access, so if asked about breaking or very recent events, " +
-      'say plainly that you cannot check the live news right now rather ' +
-      'than guessing or presenting stale training data as current. Where ' +
-      'you can help (explaining context, summarizing what you do know, ' +
-      'discussing a topic), do so concisely.',
+      'You are Jarvis in News mode. You can search the web when it ' +
+      'would genuinely improve your answer — breaking or recent events, ' +
+      'prices, or anything time-sensitive — rather than relying on ' +
+      "stale training data or guessing. Don't search when you already " +
+      'know the answer or the question does not need current ' +
+      'information. When you do search, ground your answer in what you ' +
+      "actually found, and say plainly if you couldn't confirm " +
+      'something. Where you can help without searching (explaining ' +
+      'context, discussing a topic), do so concisely.',
     sections: {
       rules: { label: 'News rules', tier: 'rules' },
       profile: { label: 'News profile', tier: 'core' },
@@ -94,11 +109,30 @@ export const AREAS = {
       'company-profiles': { label: 'Company Profiles', tier: 'retrieve' },
     },
     budget: {},
-    // Empty for the MVP. A real live-search tool (definition here, handler
-    // in jarvis/toolExecutor.js) is the only change needed to give this
-    // area live results later.
+    // remember_fact (from COMMON_TOOLS) is the only tool here that's a
+    // client-executed function — live web search is Groq's own built-in
+    // browser_search tool, wired below via providerConfig, not a function
+    // the model calls through this array (see jarvis/toolExecutor.js:
+    // browser_search never reaches it — Groq resolves it server-side
+    // before the response comes back).
     tools: [],
     readableFrom: [],
+    // Groq-specific request overrides, resolved by area + active provider
+    // (see getProviderConfig below). browser_search has no JSON-schema
+    // shape like the tools above, so it can't live in `tools`. Scoped to
+    // News only and to Groq only — an Anthropic-backed deployment simply
+    // never sees this field, and News behaves exactly as before. Runs on
+    // gpt-oss-20b rather than the default gpt-oss-120b so News's search
+    // traffic draws from its own per-model rate-limit budget instead of
+    // competing with ordinary General/Style chat for the same one
+    // (verified: a single browser_search call can use most of one
+    // model's free-tier per-minute token budget).
+    providerConfig: {
+      groq: {
+        model: 'openai/gpt-oss-20b',
+        tools: [{ type: 'browser_search' }],
+      },
+    },
   },
   style: {
     id: 'style',
@@ -108,7 +142,13 @@ export const AREAS = {
       'grooming, and personal presentation. Be specific and practical ' +
       '(concrete items, combinations, occasions) rather than generic. ' +
       'Ask about context (occasion, weather, existing wardrobe) when it ' +
-      'would meaningfully change your answer.',
+      'would meaningfully change your answer. You can search the web ' +
+      'for current fashion and style information — products, prices, ' +
+      'availability, trends, grooming — when that would help; search ' +
+      "for the product or topic itself (e.g. \"men's relaxed-fit linen " +
+      "shirt Mumbai\"), not the user's personal physical details. Stay " +
+      'in Style: if asked something that belongs in News or General, ' +
+      'say so rather than answering as if you were that mode.',
     sections: {
       rules: { label: 'Style rules', tier: 'rules' },
       budget: { label: 'Budget', tier: 'core' },
@@ -125,6 +165,18 @@ export const AREAS = {
     budget: { coreTokens: 600 },
     tools: [],
     readableFrom: [],
+    // Same mechanism as General/News — browser_search on the default
+    // model. The privacy instruction above (search the product/topic, not
+    // the physical profile) is the only available safeguard: Groq's
+    // browser_search resolves entirely server-side ("zero orchestration"
+    // — see jarvis/providers/groq.js), so there is no point in this code
+    // where a search query could be inspected or rewritten before it is
+    // sent. This is a persona instruction, not a technical control.
+    providerConfig: {
+      groq: {
+        tools: [{ type: 'browser_search' }],
+      },
+    },
   },
 }
 
@@ -160,6 +212,22 @@ export function validateAreaDefinition(def) {
   if (!Array.isArray(def.tools) || !Array.isArray(def.readableFrom)) {
     throw new Error(`Area "${def.id}" tools and readableFrom must be arrays`)
   }
+  if (def.providerConfig !== undefined) {
+    if (typeof def.providerConfig !== 'object' || def.providerConfig === null || Array.isArray(def.providerConfig)) {
+      throw new Error(`Area "${def.id}" providerConfig must be an object keyed by provider name`)
+    }
+    for (const [providerName, config] of Object.entries(def.providerConfig)) {
+      if (typeof config !== 'object' || config === null || Array.isArray(config)) {
+        throw new Error(`Area "${def.id}" providerConfig.${providerName} must be an object`)
+      }
+      if (config.tools !== undefined && !Array.isArray(config.tools)) {
+        throw new Error(`Area "${def.id}" providerConfig.${providerName}.tools must be an array`)
+      }
+      if (config.model !== undefined && (typeof config.model !== 'string' || !config.model)) {
+        throw new Error(`Area "${def.id}" providerConfig.${providerName}.model must be a non-empty string`)
+      }
+    }
+  }
   return def
 }
 
@@ -192,6 +260,15 @@ export function isAreaReadable(areaId, sourceArea, registry = AREAS) {
 export function getToolsForArea(areaId, registry = AREAS) {
   const area = getArea(areaId, registry)
   return [...COMMON_TOOLS, ...(area ? area.tools : [])]
+}
+
+// Provider-specific request overrides for one area — e.g. Groq's
+// browser_search built-in tool and the model it runs on for News (see the
+// news area's providerConfig above). Always an object, so every caller can
+// spread/read it without checking: `{}` when the area or provider has none.
+export function getProviderConfig(areaId, providerName, registry = AREAS) {
+  const area = getArea(areaId, registry)
+  return area?.providerConfig?.[providerName] ?? {}
 }
 
 // Human label for a section slug within an area (falls back to the slug).

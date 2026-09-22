@@ -17,6 +17,14 @@ export type SoundName =
   | 'reject'
   | 'error'
   | 'notify'
+  // Core Interaction Engine (tap + basketball) — same engine, same rules,
+  // just more entries. See core/JarvisCore.tsx.
+  | 'coreTap'
+  | 'coreGrab'
+  | 'coreRelease'
+  | 'coreRimHit'
+  | 'coreScore'
+  | 'coreMiss'
 
 export interface Tone {
   at: number // start offset, seconds
@@ -81,6 +89,19 @@ export const SOUNDS: Record<SoundName, Tone[]> = {
     { at: 0, dur: 0.06, freq: 1000, type: 'sine', gain: 0.28 },
     { at: 0.05, dur: 0.08, freq: 1350, type: 'sine', gain: 0.2 },
   ],
+  // Core Interaction Engine ---------------------------------------------
+  coreTap: [{ at: 0, dur: 0.05, freq: 900, endFreq: 480, type: 'triangle', gain: 0.3, lowpass: 2600 }],
+  coreGrab: [{ at: 0, dur: 0.08, freq: 300, endFreq: 500, type: 'sine', gain: 0.28 }],
+  coreRelease: [{ at: 0, dur: 0.09, freq: 700, endFreq: 1100, type: 'sine', gain: 0.3 }],
+  coreRimHit: [
+    { at: 0, dur: 0.04, freq: 1400, type: 'triangle', gain: 0.26, lowpass: 3500 },
+    { at: 0.05, dur: 0.04, freq: 1200, type: 'triangle', gain: 0.2, lowpass: 3500 },
+  ],
+  coreScore: [
+    { at: 0, dur: 0.07, freq: 880, type: 'sine', gain: 0.34 },
+    { at: 0.07, dur: 0.16, freq: 1320, type: 'sine', gain: 0.3 },
+  ],
+  coreMiss: [{ at: 0, dur: 0.1, freq: 420, endFreq: 260, type: 'triangle', gain: 0.28, lowpass: 1800 }],
 }
 
 export const SOUND_NAMES = Object.keys(SOUNDS) as SoundName[]

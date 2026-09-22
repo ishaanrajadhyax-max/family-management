@@ -11,6 +11,7 @@ import {
   listAreas,
   isAreaReadable,
   getToolsForArea,
+  getProviderConfig,
   getSectionLabel,
 } from '../jarvis/areas.js'
 
@@ -150,6 +151,50 @@ test('validateAreaDefinition rejects malformed entries', () => {
     /invalid tier/,
   )
   assert.throws(() => validateAreaDefinition({ ...ok, tools: 'nope' }), /arrays/)
+})
+
+test('getProviderConfig: all three areas offer Groq browser_search; only News overrides the model', () => {
+  const news = getProviderConfig('news', 'groq')
+  assert.equal(news.model, 'openai/gpt-oss-20b')
+  assert.deepEqual(news.tools, [{ type: 'browser_search' }])
+
+  for (const areaId of ['general', 'style']) {
+    const config = getProviderConfig(areaId, 'groq')
+    assert.equal(config.model, undefined, `${areaId} must not override the model`)
+    assert.deepEqual(config.tools, [{ type: 'browser_search' }], areaId)
+  }
+
+  assert.deepEqual(getProviderConfig('news', 'anthropic'), {}, 'scoped to Groq only')
+  assert.deepEqual(getProviderConfig('not-a-real-area', 'groq'), {})
+})
+
+test("News's provider config and persona are unchanged by extending search to General/Style (regression)", () => {
+  assert.deepEqual(getProviderConfig('news', 'groq'), { model: 'openai/gpt-oss-20b', tools: [{ type: 'browser_search' }] })
+  assert.match(AREAS.news.persona, /You are Jarvis in News mode/)
+  assert.match(AREAS.news.persona, /search the web/)
+})
+
+test('personas: General and Style both say they CAN search the web (not just mention the phrase — a persona could say "cannot search the web" and still match a loose check)', () => {
+  assert.match(AREAS.general.persona, /You can search the web/)
+  assert.doesNotMatch(AREAS.general.persona, /cannot search|no live|do not currently have/i)
+  assert.match(AREAS.style.persona, /You can search the web/)
+  assert.doesNotMatch(AREAS.style.persona, /cannot search|no live|do not currently have/i)
+})
+
+test('personas: Style is explicit about staying in its domain and not over-sharing physical details in search queries', () => {
+  assert.match(AREAS.style.persona, /Stay in Style/)
+  assert.match(AREAS.style.persona, /belongs in News or General/)
+  assert.match(AREAS.style.persona, /personal physical details/)
+})
+
+test('validateAreaDefinition: providerConfig is optional, but a malformed one is rejected', () => {
+  const ok = { ...AREAS.general, id: 'demo' }
+  assert.doesNotThrow(() => validateAreaDefinition(ok), 'no providerConfig at all is fine')
+  assert.doesNotThrow(() => validateAreaDefinition({ ...ok, providerConfig: { groq: { model: 'x', tools: [{ type: 'browser_search' }] } } }))
+  assert.throws(() => validateAreaDefinition({ ...ok, providerConfig: 'nope' }), /providerConfig must be an object/)
+  assert.throws(() => validateAreaDefinition({ ...ok, providerConfig: { groq: 'nope' } }), /providerConfig\.groq must be an object/)
+  assert.throws(() => validateAreaDefinition({ ...ok, providerConfig: { groq: { tools: 'nope' } } }), /tools must be an array/)
+  assert.throws(() => validateAreaDefinition({ ...ok, providerConfig: { groq: { model: '' } } }), /model must be a non-empty string/)
 })
 
 test('section labels resolve for global and area sections, falling back to the slug', () => {

@@ -248,7 +248,12 @@ test('format: new memory entries are found by id, and the latest entry date is p
 // ----------------------------------------------------------------- UI sound spec
 
 test('sound spec: the vocabulary covers every required cue', () => {
-  const required = ['click', 'panelOpen', 'panelClose', 'modeSwitch', 'thinkStart', 'responseReady', 'voiceStart', 'voiceStop', 'memorySaved', 'memoryDeleted', 'approve', 'reject', 'error', 'notify']
+  const required = [
+    'click', 'panelOpen', 'panelClose', 'modeSwitch', 'thinkStart', 'responseReady', 'voiceStart', 'voiceStop',
+    'memorySaved', 'memoryDeleted', 'approve', 'reject', 'error', 'notify',
+    // Core Interaction Engine
+    'coreTap', 'coreGrab', 'coreRelease', 'coreRimHit', 'coreScore', 'coreMiss',
+  ]
   assert.deepEqual([...SOUND_NAMES].sort(), [...required].sort())
 })
 
@@ -279,6 +284,18 @@ test('sound spec: direction carries meaning — opening/starting rise, closing/s
   assert.ok(SOUNDS.error.every((t) => t.lowpass && t.lowpass <= 1000), 'and filtered soft')
   const memory = SOUNDS.memorySaved.map((t) => t.freq)
   assert.deepEqual(memory, [...memory].sort((a, b) => a - b), 'memory saved climbs')
+
+  // Core Interaction Engine: grab/release rise (something is being picked up
+  // and let go, same family as voiceStart), scoring rises (success, same
+  // family as memorySaved/approve), a miss falls (a soft disappointment, not
+  // an error), and a tap is a short percussive dip, not a tone climbing up.
+  assert.ok(end('coreGrab') > SOUNDS.coreGrab[0].freq)
+  assert.ok(end('coreRelease') > SOUNDS.coreRelease[0].freq)
+  assert.ok(end('coreTap') < SOUNDS.coreTap[0].freq)
+  assert.ok(end('coreMiss') < SOUNDS.coreMiss[0].freq)
+  const score = SOUNDS.coreScore.map((t) => t.freq)
+  assert.deepEqual(score, [...score].sort((a, b) => a - b), 'a made shot climbs')
+  assert.notDeepEqual(SOUNDS.coreScore.map((t) => t.freq), SOUNDS.error.map((t) => t.freq), 'a miss must not sound like a system error')
 })
 
 test('sound spec: volume maps to a bounded, monotonic, quiet-at-the-bottom gain', () => {

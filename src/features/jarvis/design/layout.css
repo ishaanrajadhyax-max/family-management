@@ -352,6 +352,10 @@
   display: grid;
   place-items: center;
   transition: height var(--j-dur-slow) var(--j-ease);
+  /* The Core Interaction Engine's basketball shot moves the Core via a CSS
+     transform, which can otherwise expand the page's scrollable area on an
+     extreme drag; clipping here keeps that fully contained. */
+  overflow: hidden;
 }
 
 .j-center[data-compact='true'] .j-stage {

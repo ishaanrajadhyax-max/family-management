@@ -38,6 +38,50 @@ export const SPEECH_PROCESSING = {
   limiter: { ceilingDb: -1, lookaheadMs: 10 },
 } as const
 
+// The LIVE volume stage useSpeechOutput.ts inserts after the gain node, so
+// boosting past 100% raises loudness without clipping: a DynamicsCompressor
+// (loudness) feeding a hard-clamp WaveShaper (an absolute, mathematical
+// ceiling — see SAFETY_CLAMP_CURVE below).
+//
+// These exact values (threshold, knee) were tuned empirically against real
+// Chromium output, not derived from the Web Audio spec alone — a
+// DynamicsCompressorNode is not a pure "no-op below threshold" gate in
+// practice; a small knee measurably colors even sub-threshold content (a
+// 0 dB knee at -0.3 dB threshold moved a signal already at the offline
+// chain's -1 dB ceiling by about +2% peak — audible, and not what "100%
+// matches the shipped baseline" means). Maxing the knee (40 dB, the spec's
+// upper bound) made it consistently transparent under gain <= 1.0 (peak
+// within ~0.04% of the input — see speechDsp.test.mjs and the browser
+// measurement in the mission report). ratio/attack/release are unrelated to
+// that finding and were kept at reasonable limiter values.
+export const VOLUME_SAFETY_LIMITER = {
+  thresholdDb: -1,
+  kneeDb: 40,
+  ratio: 20,
+  attackSec: 0.003,
+  releaseSec: 0.1,
+} as const
+
+// A hard [-1, 1] clamp, applied via WaveShaperNode as the absolute final
+// stage after the compressor above. The compressor alone measurably still
+// let sharp transients through slightly over 0 dBFS at 150% volume in real
+// Chromium testing (ratio is finite, attack takes a few ms to catch a sharp
+// onset) — this guarantees no sample can ever exceed full scale, regardless
+// of input material. Must be built with NO oversampling: oversampling's
+// reconstruction filter rings at a curve's sharp corner (exactly the corner
+// this curve has at ±1), which reintroduced the same overshoot it exists to
+// prevent — confirmed by direct measurement, not assumed.
+export const SAFETY_CLAMP_CURVE_SIZE = 65536
+
+export function buildSafetyClampCurve(): Float32Array {
+  const curve = new Float32Array(SAFETY_CLAMP_CURVE_SIZE)
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1
+    curve[i] = Math.max(-1, Math.min(1, x))
+  }
+  return curve
+}
+
 const toLinear = (db: number) => 10 ** (db / 20)
 const toDb = (x: number) => 20 * Math.log10(Math.max(x, 1e-9))
 
@@ -195,6 +239,46 @@ function limit(x: Float32Array, sampleRate: number): { out: Float32Array; maxRed
     out[i] = x[i] * g
   }
   return { out, maxReductionDb: toDb(minGain), activeFraction: len === 0 ? 0 : active / len }
+}
+
+// Encodes mono Float32 samples as a 16-bit PCM WAV file. Used so the
+// already-processed reply can be played through an HTMLAudioElement instead
+// of a raw AudioBufferSourceNode — only a media element's playbackRate is
+// pitch-preserving (time-stretching, not simple resampling), which is what
+// lets the speed control change pace without changing Will's pitch. Plain
+// arithmetic, no DOM: testable in Node like the rest of this module.
+export function encodeWav(samples: Float32Array, sampleRate: number): ArrayBuffer {
+  const bytesPerSample = 2
+  const blockAlign = bytesPerSample // mono
+  const dataSize = samples.length * bytesPerSample
+  const buffer = new ArrayBuffer(44 + dataSize)
+  const view = new DataView(buffer)
+
+  const writeStr = (offset: number, s: string) => {
+    for (let i = 0; i < s.length; i++) view.setUint8(offset + i, s.charCodeAt(i))
+  }
+
+  writeStr(0, 'RIFF')
+  view.setUint32(4, 36 + dataSize, true)
+  writeStr(8, 'WAVE')
+  writeStr(12, 'fmt ')
+  view.setUint32(16, 16, true) // fmt chunk size
+  view.setUint16(20, 1, true) // PCM
+  view.setUint16(22, 1, true) // mono
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * blockAlign, true) // byte rate
+  view.setUint16(32, blockAlign, true)
+  view.setUint16(34, bytesPerSample * 8, true) // bits per sample
+  writeStr(36, 'data')
+  view.setUint32(40, dataSize, true)
+
+  let offset = 44
+  for (let i = 0; i < samples.length; i++) {
+    const s = Math.max(-1, Math.min(1, samples[i]))
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true)
+    offset += 2
+  }
+  return buffer
 }
 
 export interface SpeechProcessingReport {

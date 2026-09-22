@@ -1,7 +1,7 @@
 // Anthropic provider adapter — implements the same contract as
 // jarvis/providers/groq.js:
 //   isConfigured()
-//   getReply({ systemPrompt, history, tools, familyMemberId }) -> { text, usage }
+//   getReply({ systemPrompt, history, tools, familyMemberId }) -> { text, usage, model }
 //   info() -> { provider, model }
 // The system prompt arrives already assembled (jarvis/promptBuilder.js);
 // tool definitions arrive in the neutral {name, description, parameters}
@@ -81,7 +81,7 @@ export async function getReply({ systemPrompt, history, tools = [], familyMember
 
     if (response.stop_reason !== 'tool_use') {
       const textBlock = response.content.find((block) => block.type === 'text')
-      return { text: textBlock ? textBlock.text : '', usage }
+      return { text: textBlock ? textBlock.text : '', usage, model: MODEL }
     }
 
     // The model wants to call one or more tools: run them, then continue
@@ -96,5 +96,5 @@ export async function getReply({ systemPrompt, history, tools = [], familyMember
     messages.push({ role: 'user', content: toolResults })
   }
 
-  return { text: "I ran into trouble finishing that — could you try rephrasing?", usage }
+  return { text: "I ran into trouble finishing that — could you try rephrasing?", usage, model: MODEL }
 }

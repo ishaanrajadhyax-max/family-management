@@ -3,7 +3,7 @@
 // arithmetic on samples, so it runs here exactly as it does in the browser.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { processSpeech, activeRmsDb, peakDb, SPEECH_PROCESSING } from '../../src/features/jarvis/speechDsp.ts'
+import { processSpeech, activeRmsDb, peakDb, encodeWav, buildSafetyClampCurve, SPEECH_PROCESSING, VOLUME_SAFETY_LIMITER, SAFETY_CLAMP_CURVE_SIZE } from '../../src/features/jarvis/speechDsp.ts'
 
 const db = (x) => 20 * Math.log10(Math.max(x, 1e-9))
 const CEILING = SPEECH_PROCESSING.limiter.ceilingDb
@@ -215,4 +215,114 @@ test('the input array is never modified (the original decoded audio stays intact
   const copy = Float32Array.from(input)
   processSpeech(input, sr)
   assert.deepEqual(input, copy)
+})
+
+// ---- encodeWav: used so the processed reply can play through an
+// HTMLAudioElement (pitch-preserving speed needs a real media element —
+// see useSpeechOutput.ts) instead of a raw AudioBufferSourceNode. ----
+
+// Parses just enough of a WAV file to read back what encodeWav wrote — a
+// hand-rolled decoder, independent of any browser API, so this test proves
+// the bytes are actually correct rather than trusting a round-trip through
+// the same assumptions that wrote them.
+function decodeWav(buffer) {
+  const view = new DataView(buffer)
+  const readStr = (offset, len) => String.fromCharCode(...new Uint8Array(buffer, offset, len))
+  assert.equal(readStr(0, 4), 'RIFF')
+  assert.equal(readStr(8, 4), 'WAVE')
+  assert.equal(readStr(12, 4), 'fmt ')
+  const fmtSize = view.getUint32(16, true)
+  assert.equal(fmtSize, 16)
+  const audioFormat = view.getUint16(20, true)
+  const numChannels = view.getUint16(22, true)
+  const sampleRate = view.getUint32(24, true)
+  const bitsPerSample = view.getUint16(34, true)
+  assert.equal(readStr(36, 4), 'data')
+  const dataSize = view.getUint32(40, true)
+  const n = dataSize / 2
+  const samples = new Float32Array(n)
+  for (let i = 0; i < n; i++) {
+    const s = view.getInt16(44 + i * 2, true)
+    samples[i] = s < 0 ? s / 0x8000 : s / 0x7fff
+  }
+  return { audioFormat, numChannels, sampleRate, bitsPerSample, samples }
+}
+
+test('encodeWav: header fields are correct (PCM, mono, 16-bit, real sample rate)', () => {
+  const samples = Float32Array.from([0, 0.5, -0.5, 1, -1])
+  const wav = encodeWav(samples, 24000)
+  const decoded = decodeWav(wav)
+  assert.equal(decoded.audioFormat, 1, 'PCM')
+  assert.equal(decoded.numChannels, 1, 'mono')
+  assert.equal(decoded.sampleRate, 24000)
+  assert.equal(decoded.bitsPerSample, 16)
+  assert.equal(wav.byteLength, 44 + samples.length * 2)
+})
+
+test('encodeWav: round-trips the waveform within 16-bit quantization error', () => {
+  const sr = 24000
+  const input = speechLike(2, sr, { level: -14 }) // loud, close to the processed-output level
+  const wav = encodeWav(input, sr)
+  const { samples: out } = decodeWav(wav)
+  assert.equal(out.length, input.length)
+  // 16-bit quantization step is 1/32767 ≈ 3.05e-5; allow a small margin.
+  let maxErr = 0
+  for (let i = 0; i < input.length; i++) maxErr = Math.max(maxErr, Math.abs(input[i] - out[i]))
+  assert.ok(maxErr < 0.0001, `max sample error ${maxErr}`)
+  // The frequency content survives (not just the peak samples) — same test
+  // Goertzel helper used to verify the DSP chain above.
+  assert.ok(Math.abs(amplitudeAt(input, sr, 110) - amplitudeAt(out, sr, 110)) < 0.01)
+})
+
+test('encodeWav: never clips a full-scale signal (±1.0 maps to the exact int16 extremes)', () => {
+  const samples = Float32Array.from([1, -1, 1.5, -1.5]) // 1.5 is out-of-range input, must be clamped not wrapped
+  const { samples: out } = decodeWav(encodeWav(samples, 8000))
+  assert.ok(out.every((v) => v >= -1 && v <= 1))
+  assert.ok(out[0] > 0.99)
+  assert.ok(out[1] < -0.99)
+})
+
+// ---- The live volume stage (useSpeechOutput.ts): compressor + hard clamp ----
+// The DynamicsCompressorNode and WaveShaperNode only run in a real browser
+// (Web Audio isn't available in Node), so what's provable here is narrower
+// than the graph's actual behavior: a real DynamicsCompressorNode is NOT a
+// simple "no-op below threshold, hard-limit above it" gate — an earlier
+// attempt at these constants (threshold -0.3 dB, knee 0) that looked correct
+// by that simple model measurably was NOT transparent (~2% peak change) and
+// STILL let a sharp transient clip at 150% in real Chromium. These values
+// were corrected by direct browser measurement (an OfflineAudioContext
+// render, not a numeric assumption) — see the mission report for the actual
+// perceptual numbers (25%/100%/150% amplitude, no clipping at 150%, 100%
+// within ~0.04% of the untouched signal). What's tested here is just that
+// the tuned, measured-good values are the ones actually shipped and that
+// the clamp curve itself is correct.
+test('locked constants: the volume stage is the config that was actually measured transparent+non-clipping', () => {
+  assert.deepEqual(VOLUME_SAFETY_LIMITER, { thresholdDb: -1, kneeDb: 40, ratio: 20, attackSec: 0.003, releaseSec: 0.1 })
+})
+
+test('the safety-limiter threshold is never below the offline chain\'s own ceiling (a basic sanity bound)', () => {
+  // Not sufficient on its own to prove transparency (see above) — but if
+  // this were violated, the limiter would start compressing well below
+  // where the processed signal actually sits, which is obviously wrong.
+  assert.ok(VOLUME_SAFETY_LIMITER.thresholdDb >= SPEECH_PROCESSING.limiter.ceilingDb)
+})
+
+test('buildSafetyClampCurve: maps ±1 to exactly ±1, and is identity through the middle (no coloration of normal-level audio)', () => {
+  const curve = buildSafetyClampCurve()
+  assert.equal(curve.length, SAFETY_CLAMP_CURVE_SIZE)
+  assert.equal(curve[0], -1)
+  assert.equal(curve[curve.length - 1], 1)
+  assert.ok(Math.abs(curve[Math.floor(curve.length / 2)]) < 1e-3, 'the midpoint (input 0) maps to ~0')
+  // Spot-check identity across the normal operating range (well under the
+  // offline chain's -1 dB ceiling ≈ 0.89 linear) — the clamp must never
+  // touch ordinary content, only the rare sample right at the edge.
+  for (const x of [-0.9, -0.5, -0.1, 0.1, 0.5, 0.9]) {
+    const index = Math.round(((x + 1) / 2) * (curve.length - 1))
+    assert.ok(Math.abs(curve[index] - x) < 1e-3, `x=${x} -> curve=${curve[index]}`)
+  }
+})
+
+test('buildSafetyClampCurve: is monotonically non-decreasing (a real clamp, not a distorting reshape)', () => {
+  const curve = buildSafetyClampCurve()
+  for (let i = 1; i < curve.length; i++) assert.ok(curve[i] >= curve[i - 1], `curve decreased at index ${i}`)
 })
