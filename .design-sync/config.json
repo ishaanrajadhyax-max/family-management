@@ -1,0 +1,36 @@
+{
+  "projectId": "bf72c985-b201-4e75-acb7-e15d9bef2f43",
+  "shape": "package",
+  "pkg": "jarvis-design-system",
+  "globalName": "JarvisDS",
+  "srcDir": "ui",
+  "componentSrcMap": {
+    "Icon": "ui/Icon.tsx",
+    "HudPanel": "ui/HudPanel.tsx",
+    "Overlay": "ui/Overlay.tsx",
+    "ToastProvider": "ui/ToastProvider.tsx",
+    "ApprovalDialog": "ui/ApprovalDialog.tsx"
+  },
+  "cssEntry": "design/.ds-sync-bundle.css",
+  "entry": "src/features/jarvis/ui/.ds-sync-entry.tsx",
+  "readmeHeader": ".design-sync/conventions.md",
+  "dtsPropsFor": {
+    "Icon": "name: 'mic' | 'speaker' | 'speaker-off' | 'send' | 'stop' | 'replay' | 'memory' | 'trash' | 'check' | 'x' | 'sliders' | 'bell' | 'general' | 'news' | 'style' | 'family' | 'history' | 'chat' | 'intelligence' | 'voice' | 'plus' | 'chevron-down' | 'chevron-right' | 'logout' | 'undo' | 'alert' | 'info' | 'loading' | 'core';\n  size?: number;\n  className?: string;",
+    "HudPanel": "label: string; // rendered as \"LABEL //\"\n  meta?: string; // small mono text at the right of the header\n  actions?: React.ReactNode;\n  tone?: 'default' | 'attention';\n  className?: string;\n  children: React.ReactNode;",
+    "Overlay": "open: boolean;\n  onClose: () => void;\n  label: string; // \"MEMORY\" -> header \"MEMORY //\" and the dialog's accessible name\n  variant?: 'modal' | 'drawer' | 'sheet';\n  children: React.ReactNode;",
+    "ToastProvider": "children: React.ReactNode;",
+    "ApprovalDialog": "open: boolean;\n  label: string; // \"MEMORY REQUEST\"\n  title: string;\n  detail?: string; // the specific thing being approved, quoted\n  confirmLabel: string;\n  cancelLabel?: string; // default \"CANCEL\"\n  tone?: 'normal' | 'danger';\n  onConfirm: () => void | Promise<void>;\n  onCancel: () => void;"
+  },
+  "overrides": {
+    "ApprovalDialog": { "cardMode": "single", "primaryStory": "Normal" },
+    "Overlay": { "cardMode": "single", "primaryStory": "Modal" },
+    "ToastProvider": { "cardMode": "single", "primaryStory": "AllTones" }
+  },
+  "extraFonts": [
+    "../../../node_modules/@fontsource/rajdhani/latin-500.css",
+    "../../../node_modules/@fontsource/rajdhani/latin-600.css",
+    "../../../node_modules/@fontsource/rajdhani/latin-700.css",
+    "../../../node_modules/@fontsource/jetbrains-mono/latin-400.css",
+    "../../../node_modules/@fontsource/jetbrains-mono/latin-500.css"
+  ]
+}
